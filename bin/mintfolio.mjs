@@ -59,7 +59,7 @@ const help = {
   sync                            补齐已安装主题的配置
   check [主题]                    校验清单、配置和页面路径
 
-default 是 @mintfolio/theme-default 的别名。
+verdant 是 @mintfolio/theme-default 的别名；default / happyhues 继续兼容。
 示例：mintfolio theme install default --use`,
   config: `用法：mintfolio config <操作> <site|theme>
 

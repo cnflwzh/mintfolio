@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 使用与主题开发教程
+    url: https://github.com/cnflwzh/mintfolio/wiki
+    about: 安装、写作、配置、部署和主题开发指南
+  - name: 私下报告安全问题
+    url: https://github.com/cnflwzh/mintfolio/security/advisories/new
+    about: 请勿公开真实口令或私有文章

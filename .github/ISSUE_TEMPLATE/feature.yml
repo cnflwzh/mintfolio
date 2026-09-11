@@ -1,0 +1,15 @@
+name: 功能建议
+description: 说说现在遇到的使用障碍
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决什么问题
+      description: 描述实际使用场景，以及已有做法的不便。
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你希望怎样使用
+      description: 可以给出命令、配置或页面示例。

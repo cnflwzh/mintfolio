@@ -1,111 +1,104 @@
-# @mintfolio/core
+<p align="center"><img src="docs/assets/mintfolio-icon.png" width="112" height="112" alt="Mintfolio" /></p>
 
-Mintfolio 的 Astro 博客引擎。Core 包含内容模型、路由、SEO、RSS、Sitemap、加密文章以及可供主题复用的浏览器 API；内置文字优先的 Minimal，可独立构建博客。
+# Mintfolio
 
-## 安装
+把个人主页和博客放在一起，用 Markdown 写文章，用主题决定它们的样子。
 
-当前代码已支持 npm tarball 安装，尚未发布到公共 registry。发布后的使用方式为：
+Mintfolio 基于 Astro。站点目录保存你的资料、文章和图片；引擎负责文章路由、搜索数据、RSS、Sitemap 和密码文章。换一个主题，内容仍然留在原处。
 
-```sh
-npm install @mintfolio/core
-npx mintfolio init
-npm run dev
-```
+[使用教程](https://github.com/cnflwzh/mintfolio/wiki/Getting-Started) · [命令参考](docs/cli.md) · [开发主题](https://github.com/cnflwzh/mintfolio/wiki/Theme-Development) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/cnflwzh/mintfolio/issues)
 
-`init` 生成站点配置、主题配置、内容集合入口和一篇示例文章，不覆盖已有文件。站点不需要复制 Core 的路由或源码。`mintfolio build` 和 `mintfolio preview` 分别构建及预览。
+![Verdant 主题的个人主页](docs/assets/home-desktop.webp)
 
-## 命令行工具
+*上图使用 Verdant 主题和示例资料。只安装引擎时，默认使用文字为主的 Minimal。*
 
-Core >= 0.1.2 提供完整 `mintfolio` CLI。在站点中使用 `npx mintfolio`，或通过 `npm install -g @mintfolio/core` 安装全局命令。每个站点仍安装并锁定自己的依赖。
+## 能做什么
 
-```sh
-mintfolio create my-blog --theme default
+- 用 Markdown 管理文章，支持分类、标签、标题与摘要搜索。
+- 在主页展示个人资料、技能、项目和社交链接。
+- 为单篇文章设置密码，在浏览器中解锁正文。
+- 通过命令行新建草稿、安装主题、修改配置并构建网站。
+- 输出静态文件，部署到普通 Web 服务器或静态托管平台。
+
+Core 自带 Minimal；[Verdant](https://github.com/cnflwzh/mintfolio-theme-verdant) 提供文章卡片、八套配色、明暗模式、目录和阅读工具。第三方主题可以从两个 Astro 页面开始，再逐步补齐自己的布局。
+
+## 开始使用
+
+需要 **Node.js >= 22.12.0**。项目仍在开发中，下面的安装命令适用于 npm 包正式发布后。
+
+~~~sh
+npm install -g @mintfolio/core
+mintfolio create my-blog
 cd my-blog
-mintfolio post new "我的第一篇文章" --slug first-post
-mintfolio post publish first-post
-mintfolio theme install default --use
-mintfolio config set site site.title "我的博客"
-mintfolio config set theme initialPalette 3
-mintfolio config edit theme
-mintfolio doctor
 mintfolio dev
-```
+~~~
 
-| 命令 | 用途 |
+打开终端显示的地址。编辑 site.config.ts 填写资料，文章放在 content/blog。
+
+想使用上图的 Verdant：
+
+~~~sh
+mintfolio theme install verdant --use
+~~~
+
+## 写第一篇文章
+
+~~~sh
+mintfolio post new "我的第一篇文章" --slug first-post
+~~~
+
+打开 content/blog/first-post.md 写正文。新文章默认是草稿，准备好后再发布并构建：
+
+~~~sh
+mintfolio post publish first-post
+mintfolio build
+mintfolio preview
+~~~
+
+post publish 修改本地草稿状态；build 生成 dist；部署时上传 dist 中的内容。[写作教程](https://github.com/cnflwzh/mintfolio/wiki/Writing) 介绍日期、封面、嵌套目录和密码文章。
+
+## 常用操作
+
+| 想做什么 | 命令或文件 |
 | --- | --- |
-| `create` / `init` / `upgrade` | 创建站点、补齐文件、更新 Core |
-| `post new/list/publish/draft` | 创建草稿、列文章、切换发布状态 |
-| `theme list/current/install/use` | 查看、安装、启用主题 |
-| `theme init/sync/check` | 生成或校验主题配置 |
-| `config get/set/path/edit/schema` | 查看有效设置、按字段修改、打开文件、查询配置项 |
-| `dev/build/preview/sync` | 运行当前站点安装的 Astro |
-| `doctor` / `check` | 诊断环境、校验配置与内容 |
+| 修改网站标题 | mintfolio config set site site.title "我的博客" |
+| 编辑个人资料 | site.config.ts |
+| 调整主题设置 | mintfolio config edit theme |
+| 查看主题配置项 | mintfolio config schema theme |
+| 检查环境 | mintfolio doctor |
+| 查看命令帮助 | mintfolio --help |
 
-新文章默认是草稿；配置和草稿状态修改会保留其他内容，并将原文件备份到 `.mintfolio/backups`。重复初始化或生成配置不会覆盖已有文件。主题 `install` 加 `--use` 才会同时切换，旧的 `theme:add` 等命令仍兼容。
+[配置教程](https://github.com/cnflwzh/mintfolio/wiki/Configuration) 说明内容与显示设置的区别、备案号、图片和配置优先级。
 
-使用 `mintfolio <命令> --help` 查看选项。[完整 CLI 文档](docs/cli.md) 包含全局安装、本地仓库、新站点、主题切换、JSON 配置、编辑器和备份恢复说明。
+## 界面
 
-## 主题选择
+![文章阅读](docs/assets/article-reading.webp)
 
-省略 `theme.config.mjs` 中的 `theme` 字段，或使用 `minimal`，即选择内置 Minimal。显式指定一个不存在的包会报错。Core 不依赖 Default、React 或 Tailwind。
+<p><img src="docs/assets/home-mobile.webp" width="280" alt="手机上的 Verdant 首页" /> <img src="docs/assets/encrypted-mobile.webp" width="280" alt="手机上的密码文章" /></p>
 
-另装一个主题后修改配置：
+## 开发状态
 
-```sh
-npm install @mintfolio/theme-default
-```
+当前重点是完善写作流程、主题接口和跨平台安装。0.x 阶段仍可能调整接口；升级前请保留源文件与锁文件，并阅读版本说明。
 
-```js
-export default { theme: '@mintfolio/theme-default' };
-```
+目前需要知道的几件事：
 
-Core >= 0.1.1 可通过 `npx mintfolio theme:add default` 一次完成安装与主题配置生成。它会在站点根目录生成 `theme-default.config.mjs`，其中包含全部可编辑设置和说明；`theme.config.mjs` 继续负责选择主题和页面覆盖。
+- 草稿在开发和生产构建中都不会公开显示。
+- 搜索匹配标题和公开摘要，不搜索全文；标签、分类与搜索共用博客归档页。
+- Minimal 目前不显示备案号；Verdant 的首页和普通页面支持 icp 字段。
+- 密码文章的正文和目录会被加密，标题、图片等信息仍公开。
+- CLI 负责本地操作与构建，部署由你选择的托管平台完成。
 
-使用普通 `npm install` 安装主题后，下一次 `mintfolio dev/build/sync` 会补齐主题声明的配置模板。也可运行 `npx mintfolio theme:init default` 立即生成，或 `npx mintfolio theme:sync` 同步已安装主题。`mintfolio init` 会生成 Minimal 的设置文件。重复生成与升级保留已有文件。
+## 仓库
 
-只读取当前所选主题的 `theme-<id>.config.mjs`。主题清单默认值、专属配置文件、旧的内联 `theme.config.mjs.settings` 依次覆盖；嵌套对象递归合并、数组整组替换。主题配置文件使用原生 ESM，建议直接导出设置对象，图片使用 public 路径或 URL。
-
-## 公开入口
-
-| 入口 | 调用方 / 用途 |
+| 仓库 | 内容 |
 | --- | --- |
-| `@mintfolio/core` | 宿主 Astro integration，自动注入博客路由 |
-| `@mintfolio/core/config` | 宿主 `defineSiteConfig` 和内容配置类型 |
-| `@mintfolio/core/content` | 宿主 `createBlogCollection()` |
-| `@mintfolio/core/theme` | 主题清单、嵌套设置、公开 DTO 与上下文类型 |
-| `@mintfolio/core/astro` | 主题 `PageProps`、页面、正文与 SEO 类型 |
-| `@mintfolio/core/search` | 纯搜索、筛选及查询参数函数 |
-| `@mintfolio/core/client` | 列表状态、生命周期、解锁、目录、阅读进度、图片预览与复制 API |
-| `@mintfolio/core/components/PostArchive.astro` | 可选搜索、标签、分类、分页列表组件 |
-| `@mintfolio/core/components/ProtectedArticle.astro` | 可选密码表单、解锁与重新锁定组件 |
-| `@mintfolio/core/components/SeoHead.astro` | 可选 head 元数据组件 |
-| `@mintfolio/core/components/Image.astro` | 可选 Astro 图片适配组件 |
+| [mintfolio](https://github.com/cnflwzh/mintfolio) | 项目入口、CLI、博客引擎与 Minimal |
+| [mintfolio-theme-verdant](https://github.com/cnflwzh/mintfolio-theme-verdant) | Verdant 主题 |
+| [mintfolio-theme-api](https://github.com/cnflwzh/mintfolio-theme-api) | 主题的公共类型与契约 |
+| [mintfolio-theme-starter](https://github.com/cnflwzh/mintfolio-theme-starter) | 可直接修改的主题起点 |
 
-主题只使用面向主题的公开入口，通过 `{ theme, page }` 获取内容；不得导入宿主配置、原始内容或 Core 的 `src/server`、`src/engine`、`src/routes`。Core 的私有文件随包编译，并不构成公共 API。
+想贡献代码，从 [CONTRIBUTING.md](CONTRIBUTING.md) 开始。发现安全问题，请按 [SECURITY.md](SECURITY.md) 私下报告。
 
-## 包内职责
+## 许可证
 
-```text
-src/public/      对外 ESM 与类型门面（编译到 dist）
-src/client/      可选无界面的浏览器控制器（编译到 dist）
-src/components/  可选 Astro 组件
-src/server/      私有内容、URL、SEO、加密和数据投影
-src/engine/      私有主题解析、校验、上下文与调度
-src/routes/      私有 Astro 路由
-src/fallback/    内置 Minimal，仅通过公共 API 使用 Core
-bin/            CLI 入口、站点/文章/主题/配置操作
-```
-
-包依赖独立的 `@mintfolio/theme-api` 契约层；应用作者无需额外选择它。主题 API 使用 1.x 契约版本，与 Core 包的 0.1.x 版本分开。
-
-## 独立仓库开发
-
-博客引擎。src/server、engine、routes 是私有实现；public、client、components 提供主题公共 API；fallback 是 Minimal。tests 与 tools/verify-theme-boundaries.mjs 验证核心契约。
-
-```sh
-npm ci
-npm test
-npm pack
-```
-
-这个仓库可单独安装，不需要 PersonalSite 或其他源码目录。拆分前历史保留在原 PersonalSite，起点见 MIGRATION.md。 尚未发布的依赖固定在 vendor 和锁文件中；更新方式见 vendor/README.md。
+[GPL-3.0-only](LICENSE)。第三方依赖和资源保留各自许可证，见 [第三方声明](THIRD_PARTY_NOTICES.md)。

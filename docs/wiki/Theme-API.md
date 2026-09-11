@@ -2,7 +2,7 @@
 
 Mintfolio 的布局主题是一个独立模块：Core 负责内容公开策略、URL、路由、SEO 和受保护文章的密文，主题只负责用公开数据渲染页面。主题可以拥有任意 HTML、CSS 和浏览器交互，不需要也不能继承默认主题的布局。
 
-`@mintfolio/core` 0.1.x 提供完整引擎和主题公共入口，内部依赖 `@mintfolio/theme-api` 1.x 契约层。各组件独立发布。组件关系见 [Core 与主题包](core-packages.md)。
+`@mintfolio/core` 0.1.x 提供完整引擎和主题公共入口，内部依赖 `@mintfolio/theme-api` 1.x 契约层。各组件独立发布。组件关系见 [Core 与主题包](https://github.com/cnflwzh/mintfolio/blob/main/docs/core-packages.md)。
 
 ## 公开入口与边界
 
@@ -237,7 +237,7 @@ npm 包通过 `exports` 导出 `./theme`。显式包名无法解析时构建失�
 
 `overrides.pages` 是相对项目根目录的显式 `.astro` 覆盖，例如 `{ pages: { archive: './my-theme/archive.astro' } }`。覆盖同样必须在项目内，不能指向 Core、路由或主题 Runtime。没有隐式同名文件覆盖，也没有 `extends`/主题继承。
 
-独立作者可从 [Theme Starter](https://github.com/cnflwzh/mintfolio-theme-starter) 开始。主题包应包含 `type: "module"`、`exports: { "./theme": "./theme.mjs" }`、完整的 `files` 白名单，以及 `@mintfolio/core: ^0.1.0` 与 `astro: ^7.3.2` 的 peerDependencies。主题使用底层 SDK 时额外声明该依赖。开发与包职责见 [组件说明](core-packages.md)。
+独立作者可从 [Theme Starter](https://github.com/cnflwzh/mintfolio-theme-starter) 开始。主题包应包含 `type: "module"`、`exports: { "./theme": "./theme.mjs" }`、完整的 `files` 白名单，以及 `@mintfolio/core: ^0.1.0` 与 `astro: ^7.3.2` 的 peerDependencies。主题使用底层 SDK 时额外声明该依赖。开发与包职责见 [组件说明](https://github.com/cnflwzh/mintfolio/blob/main/docs/core-packages.md)。
 
 
 ## 本地检查

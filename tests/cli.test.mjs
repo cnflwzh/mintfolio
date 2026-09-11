@@ -155,6 +155,7 @@ test('actual CLI accepts quoted titles, subdirectories and aliases, and fails un
   await run(['theme:check']);
   await assert.rejects(run(['post', 'unknown']), error => error.code === 1);
   await assert.rejects(run(['post', 'new', 'Typo', '--unknwon']), error => error.code === 1);
+  assert.deepEqual(packageSpec('verdant@0.1.2'), { name: '@mintfolio/theme-default', spec: '@mintfolio/theme-default@0.1.2' });
   assert.deepEqual(packageSpec('default@0.1.1'), { name: '@mintfolio/theme-default', spec: '@mintfolio/theme-default@0.1.1' });
   assert.throws(() => packageSpec('--global'));
   assert.throws(() => packageSpec('@scope/theme@'));

@@ -1,7 +1,7 @@
 {
   "name": "@mintfolio/core",
-  "version": "0.1.4",
-  "description": "Astro blog engine with public theme APIs and a lightweight built-in fallback",
+  "version": "0.1.5",
+  "description": "A Markdown blog and personal site toolkit, built with Astro.",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -14,7 +14,9 @@
     "dist",
     "src",
     "README.md",
-    "docs/cli.md"
+    "docs/cli.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "exports": {
     ".": {
@@ -72,5 +74,15 @@
     "test:unit": "npm run build && node --experimental-strip-types --test tests/*.test.mjs",
     "test:boundaries": "npm run build && node tools/verify-theme-boundaries.mjs",
     "deps:update": "node tools/update-local-deps.mjs"
+  },
+  "license": "GPL-3.0-only",
+  "author": "CNFLWZH",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cnflwzh/mintfolio.git"
+  },
+  "homepage": "https://github.com/cnflwzh/mintfolio/wiki",
+  "bugs": {
+    "url": "https://github.com/cnflwzh/mintfolio/issues"
   }
 }

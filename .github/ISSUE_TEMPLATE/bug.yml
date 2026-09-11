@@ -1,0 +1,25 @@
+name: 问题报告
+description: 描述可以复现的安装、配置或运行问题
+title: "[Bug] "
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境与版本
+      description: 包版本、Node.js、系统，以及 doctor 输出（如适用）。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 如何复现
+      description: 提供最少步骤和配置，移除密码、令牌与私有内容。
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 预期与实际结果
+      description: 可以附日志或截图。
+    validations:
+      required: true
