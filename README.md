@@ -24,7 +24,7 @@ Core 自带 Minimal；[Verdant](https://github.com/cnflwzh/mintfolio-theme-verda
 
 ## 开始使用
 
-需要 **Node.js >= 22.12.0**。项目仍在开发中，下面的安装命令适用于 npm 包正式发布后。
+需要 **Node.js >= 22.12.0**。项目仍在持续开发中。
 
 ~~~sh
 npm install -g @mintfolio/core
