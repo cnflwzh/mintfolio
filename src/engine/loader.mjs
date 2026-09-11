@@ -28,8 +28,8 @@ async function resolveManifest(specifier, root) {
   let filename;
   if (!specifier || specifier === 'minimal') {
     filename = fileURLToPath(new URL('../fallback/theme.mjs', import.meta.url));
-  } else if (['verdant', 'default', 'happyhues'].includes(specifier)) {
-    return resolveManifest('@mintfolio/theme-default', root);
+  } else if (specifier === 'verdant') {
+    return resolveManifest('@mintfolio/theme-verdant', root);
   } else if (specifier.startsWith('.') || path.isAbsolute(specifier)) {
     filename = path.resolve(root, specifier);
     if ((await stat(filename)).isDirectory()) filename = path.join(filename, 'theme.mjs');

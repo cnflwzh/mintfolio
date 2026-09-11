@@ -6,7 +6,7 @@
 
 实施前按目标文件要求，先完成 Current Architecture → Problems → Proposed Theme Architecture → Migration Plan，并独立提交审查文档。下文记录当时提案，接口的准确名称和当前用法以 [Theme API 文档](theme-api.md) 为准。
 
-**建议结论**：保留 Astro、现有内容集合、站点配置和静态部署。把现有页面迁移为 Default Theme，把文件路由缩减为 Core 的入口；以一个小型、可打包的公开 SDK 和构建期 Theme Loader 连接两者。第二个 Minimal Theme 独立输出文字列表和单栏文章，用相同内容、相同 URL 验证布局自由。
+**建议结论**：保留 Astro、现有内容集合、站点配置和静态部署。把现有页面迁移为 Verdant Theme，把文件路由缩减为 Core 的入口；以一个小型、可打包的公开 SDK 和构建期 Theme Loader 连接两者。第二个 Minimal Theme 独立输出文字列表和单栏文章，用相同内容、相同 URL 验证布局自由。
 
 ## Current Architecture
 
@@ -21,8 +21,8 @@
 | 内容渲染 | `src/pages/blog/[...slug].astro:23` 生成路由，`:33` 调用 `render(post)`，后续直接输出文章、目录、工具和 CSS | 路由、内容处理和最终 UI 集中于同一文件 |
 | 搜索与筛选 | `PostCard.astro:18` 把元数据放入 DOM；`postList.ts:54` 从 `.post-card` 读取数据，`:64` 过滤；`postFilters.ts:5` 读写 `q/tag/category` | 搜索范围是标题和展示摘要，标签/分类是条件筛选；不是正文搜索，没有独立搜索索引端点 |
 | 列表加载 | 首页和博客页把全部文章卡片输出为 HTML，初始显示数量分别为 6/8，再由浏览器显示更多 | 当前不是构建期分页；第一阶段保留此行为，避免同步改分页和 URL |
-| 配置 | `site.config.ts` 配合 `src/utils/types.ts`，含网站、资料、项目、社交和多种展示选项；配置导入本地头像图片 | 需要区分公共内容与 Default Theme 展示配置；配置文件不能简单当作纯 Node 数据模块加载 |
-| 配色 | `site.config.ts:5` 的 `theme: 'happyhues'` 没有参与组件选择；`Base.astro:21` 固定导入 happyhues CSS | 现有 theme 字段不是布局主题加载器；运行时的 8 套配色、自动/浅色/深色属于 Default Theme 的能力 |
+| 配置 | `site.config.ts` 配合 `src/utils/types.ts`，含网站、资料、项目、社交和多种展示选项；配置导入本地头像图片 | 需要区分公共内容与 Verdant Theme 展示配置；配置文件不能简单当作纯 Node 数据模块加载 |
+| 配色 | `site.config.ts:5` 的 `theme: 'happyhues'` 没有参与组件选择；`Base.astro:21` 固定导入 happyhues CSS | 现有 theme 字段不是布局主题加载器；运行时的 8 套配色、自动/浅色/深色属于 Verdant Theme 的能力 |
 | 页面框架 | `Base.astro` 输出完整 HTML、head、ClientRouter、字体、全局样式、统计脚本、悬浮按钮等 | Base 是现有主题布局，不适合作为所有主题必须继承的 Core 布局 |
 | 状态 | URL 保存筛选；`history.state` 保存列表数量/状态和文章来源；sessionStorage 保存返回目标；localStorage 保存配色和提示状态 | 没有中心状态仓库；多数状态管理是原生 DOM 和浏览器机制 |
 | 生命周期 | `scripts/lifecycle.ts:46` 用 `onPage()` 处理初次加载、Astro 页面切换和文章解锁后的挂载，配合 AbortController、disposer、定时器与动画清理 | 可以复用；需要区分通用资源管理与默认主题的选择器、事件 |
@@ -58,10 +58,10 @@ site.config.ts ─────────────────────�
 | URL 规则分散 | `postHref()` 已编码 slug，但首页 `:225/:315` 直接拼 `/blog/${post.id}`；文章标签也自行组装查询参数 | 所有内容链接、taxonomy 链接和导航目的地址由 Core 提供 |
 | 搜索算法依赖默认 DOM | `PostItem` 包含 HTMLElement；筛选函数与 `.post-card`、按钮状态混放 | 提取纯数据过滤与 URL 参数转换；保留默认主题的 DOM 显示层 |
 | 加密边界位于 UI 组件 | ProtectedArticle 接收原始 password，并把 TOC 与正文作为 UI slot 一起加密 | Core 提前生成安全的文章正文载荷；主题只绘制文章和解锁交互 |
-| 全局框架携带视觉要求 | Base 固定 happyhues、隐藏滚动条、主题面板、Hero 提示、ClientRouter；`site.ts:28` 缺少悬浮容器就提前返回 | 整体归 Default Theme；按需提取纯服务，不能把这些容器升级为 Theme Contract |
+| 全局框架携带视觉要求 | Base 固定 happyhues、隐藏滚动条、主题面板、Hero 提示、ClientRouter；`site.ts:28` 缺少悬浮容器就提前返回 | 整体归 Verdant Theme；按需提取纯服务，不能把这些容器升级为 Theme Contract |
 | 通用配置带有布局名称 | `sidebar.sections`、`home.hotContent`、`article.footerImage` | 第一阶段做兼容映射，后续逐步归入默认主题设置；不强制其他主题读取 sidebar |
 | SEO/站点信息分散 | Base 固定 `lang="zh-CN"` 和 Analytics ID，博客页硬编码标题描述 | Core 提供 SEO/站点信息；主题决定 head 渲染，可用无视觉结构的 SDK helper |
-| 导航恢复依赖框架行为 | `postList.ts:46` 必须在 swap 前恢复高度；`article.ts:21` 使用 Astro history index | Default 保留现有顺序，先不抽象为所有主题的全局路由器 |
+| 导航恢复依赖框架行为 | `postList.ts:46` 必须在 swap 前恢复高度；`article.ts:21` 使用 Astro history index | Verdant 保留现有顺序，先不抽象为所有主题的全局路由器 |
 
 **已经可作为 Theme API 基础的代码**：`getPublishedPosts()` 的筛选和排序、`getPostFacets()` 的统计、`postHref()` 的编码规则、受保护摘要策略、`PostFilters`、站点资料/社交/技能/项目类型，以及 XML 转义与文章加密算法。复用的是实现和语义，原始 `CollectionEntry`、DOM 型 `PostItem`、带展示字段的完整 `SiteConfig` 不直接成为稳定公共契约。
 
@@ -89,7 +89,7 @@ Theme ───→ Theme 自身组件/资源       允许
 Theme ───→ src/core、site.config、原始内容、astro:content   不允许
 ```
 
-主题提供完整的页面 renderer，可以自行写 `<html>/<head>/<body>`，也可以使用自己的 Layout。Core 不统一包 Base，不注入 Header/Sidebar/Hero/PostCard，不强制启用 ClientRouter。Default 保留当前 ClientRouter；Minimal 可以用普通链接。Core 提供导航目的地址，主题决定展示哪些链接、如何组织和摆放。
+主题提供完整的页面 renderer，可以自行写 `<html>/<head>/<body>`，也可以使用自己的 Layout。Core 不统一包 Base，不注入 Header/Sidebar/Hero/PostCard，不强制启用 ClientRouter。Verdant 保留当前 ClientRouter；Minimal 可以用普通链接。Core 提供导航目的地址，主题决定展示哪些链接、如何组织和摆放。
 
 公开包拟名 `@mintfolio/theme-api`，先用本地 `file:packages/theme-api` 依赖，不为此把整个项目改成 monorepo。发布能力通过明确的 package exports 和可打包目录建立，包名尚未申请或发布：
 
@@ -149,7 +149,7 @@ Capabilities 为已知 boolean 字段，未声明按 false；扩展信息放命�
 | `search` | 否 | 保留 `/blog?q=...` | 当前由 archive 的客户端筛选实现；独立搜索页面暂不启用 |
 | `notFound` | 否 | 新增 `/404.html` 构建产物 | 内置简洁 404 renderer；托管端仍需配置正确的 404 响应 |
 
-fallback 只替换 renderer，保留请求语义和数据。归档不能 fallback 到只显示欢迎语或最新三篇文章的 home；page 和 404 也不能伪装为首页。内置 fallback 是 Runtime 提供的极小参考渲染层，与 Default 的 Base/CSS/脚本无关；主题可以显式实现可选页面以完全控制它们。
+fallback 只替换 renderer，保留请求语义和数据。归档不能 fallback 到只显示欢迎语或最新三篇文章的 home；page 和 404 也不能伪装为首页。内置 fallback 是 Runtime 提供的极小参考渲染层，与 Verdant 的 Base/CSS/脚本无关；主题可以显式实现可选页面以完全控制它们。
 
 `home`、`post`、`page` 分别有明确 props；`archive/tag/category/search` 共用列表上下文，并保留 `kind` 区分。主题不提供 `getStaticPaths()`、路由 pattern、middleware 或 `injectRoute()` hook。
 
@@ -225,9 +225,9 @@ interface ThemeContext<Settings> {
 - 普通文章的 body 由 Core 调用现有 `astro:content.render()` 得到；主题接收编译后的内容与 headings，不读取 Markdown。
 - 加密文章的 body 为判别联合的 protected 分支，只含 postId 与加密载荷，不带公开 headings、明文摘要、raw body 或可绕过保护的 Content 组件。
 - Core 统一决定：草稿不发布；加密摘要使用现有占位语；RSS/Sitemap 继续排除加密文章；SEO 继续 noindex；搜索数据仅含公开元数据和占位摘要。
-- 解锁的视觉界面属于主题；SDK 的浏览器 helper 负责载荷校验、现有 Web Crypto 解密与 DOMPurify 清理。Default 保留现有错误/成功/重新锁定流程和阅读工具，Minimal 实现简单输入框和正文。
+- 解锁的视觉界面属于主题；SDK 的浏览器 helper 负责载荷校验、现有 Web Crypto 解密与 DOMPurify 清理。Verdant 保留现有错误/成功/重新锁定流程和阅读工具，Minimal 实现简单输入框和正文。
 
-当前加密的是带默认主题 DOM 的完整 slot HTML。建议先在 Core 的 Astro adapter 内，用正式 `Astro.slots.render()` 取得编译后的 Markdown，再将“无主题样式的正文 + headings”作为带版本的内容 envelope 加密；低层 `EncryptedArticle` v1、PBKDF2/AES-GCM 算法和参数保持不变。普通正文继续走 Astro 渲染，不另写 Markdown parser。Default 解锁后依据 headings 重建原 TOC，挂载现有阅读工具；重新锁定、导航离开和异步解密取消必须清除正文、目录及其引用。
+当前加密的是带默认主题 DOM 的完整 slot HTML。建议先在 Core 的 Astro adapter 内，用正式 `Astro.slots.render()` 取得编译后的 Markdown，再将“无主题样式的正文 + headings”作为带版本的内容 envelope 加密；低层 `EncryptedArticle` v1、PBKDF2/AES-GCM 算法和参数保持不变。普通正文继续走 Astro 渲染，不另写 Markdown parser。Verdant 解锁后依据 headings 重建原 TOC，挂载现有阅读工具；重新锁定、导航离开和异步解密取消必须清除正文、目录及其引用。
 
 这个 envelope 是新增的内容适配协议，不应冒充与旧“整块主题 HTML”完全相同。版本需要独立标注，主题切换时重新构建整站；本阶段不做旧密文与新客户端混用。发布沿用当前整站 dist 方式。MDX 的交互组件不能简单承诺可通过字符串渲染保留 hydration，未来启用 MDX 时再扩展 `/astro` 适配契约。该环节是实现前段需要优先验证的技术点。
 
@@ -244,13 +244,13 @@ schema 第一阶段只支持 string、boolean、number、select、color；每项
 ```js
 // 第一阶段在这里切换 default / minimal，未来可填已安装包名。
 export default {
-  theme: 'default',
+  theme: 'verdant',
   settings: {},
   overrides: { pages: {} },
 };
 ```
 
-原因：现有 `site.config.ts` 会 import PNG；Astro 的配置初始化阶段不能无条件依赖应用的图片编译链。分离仅限构建启动所需的主题选择，不复制第二份站点数据。`site.config.ts` 的 theme 字段引用该值，其他站点/内容配置仍保留原位置；新增配置检查应防止两处选择不一致。旧 `happyhues` 作为 `default` 的兼容别名并提示迁移；旧主题配色 localStorage key 由 Default 继续读取。布局主题切换是站长修改配置后重新构建，访问者的配色开关继续是 Default 内部功能。
+原因：现有 `site.config.ts` 会 import PNG；Astro 的配置初始化阶段不能无条件依赖应用的图片编译链。分离仅限构建启动所需的主题选择，不复制第二份站点数据。`site.config.ts` 的 theme 字段引用该值，其他站点/内容配置仍保留原位置；新增配置检查应防止两处选择不一致。主题选择统一使用 `verdant`；旧主题配色 localStorage key 由 Verdant 继续读取。布局主题切换是站长修改配置后重新构建，访问者的配色开关继续是 Verdant 内部功能。
 
 **Theme Loader 与 Virtual Module。**
 
@@ -334,8 +334,8 @@ SDK 的 Node 入口应先有可执行 JS 和 declarations，再由 manifest/load
 | --- | --- | --- |
 | M0：方案确认 | 审阅本文的边界、配置入口、加密适配和 fallback 选择 | 确认后才修改业务代码 |
 | M1：公共数据边界 | SDK 核心类型、公开文章投影、URL/过滤纯逻辑；旧页面仍运行 | 核心用例证明草稿、密码和原始受保护摘要不会进入公共数据，URL 编码和过滤保持现有语义 |
-| M2：Runtime 最小纵向接入 | manifest/loader/validator、Default home/post renderer、Core 路由薄化；优先验证加密 body 适配 | 首页、普通文章、加密文章可构建和阅读；不靠 Theme import Core 实现；尚未接入的页面仍走旧入口 |
-| M3：完成 Default Theme | 迁移关于页/归档页、Base、组件、CSS、交互；接入搜索数据、SEO、RSS/Sitemap 共享策略 | 所有现有页面保留 URL、视觉与核心行为；默认主题不再读取宿主内部内容/配置 |
+| M2：Runtime 最小纵向接入 | manifest/loader/validator、Verdant home/post renderer、Core 路由薄化；优先验证加密 body 适配 | 首页、普通文章、加密文章可构建和阅读；不靠 Theme import Core 实现；尚未接入的页面仍走旧入口 |
+| M3：完成 Verdant Theme | 迁移关于页/归档页、Base、组件、CSS、交互；接入搜索数据、SEO、RSS/Sitemap 共享策略 | 所有现有页面保留 URL、视觉与核心行为；默认主题不再读取宿主内部内容/配置 |
 | M4：第二主题与扩展验证 | Minimal 文字列表和无现有 Header/Sidebar/Card 的文章页；显式 override、optional fallback、公开 Starter | 同份文章构建出两套明显不同页面；Minimal 可访问关于/归档、使用查询链接并解锁既有加密文章 |
 | M5：完成阶段验收 | SDK 文档、打包 fixture、核心校验及两主题浏览器验收 | 打包后的主题经与外部包相同的 resolver 安装到隔离 fixture，在没有宿主 Core 源码依赖的情况下构建 |
 
@@ -345,16 +345,16 @@ M1–M3 中间态可以逐步接入，但不能把“迁入 themes 目录却继�
 
 本轮只有审查文档，不跑测试。实现阶段只为 Core 内容公开策略、URL/搜索语义、主题契约/加载/fallback/设置、加密载荷等核心功能补测试；不新增配色排列、每条 CSS 或源码字符串断言。按相关核心增量完成后统一运行类型检查与对应核心测试，不每搬一个组件就跑全套。
 
-Default 继续使用现有导航、筛选、加载更多、阅读工具、主题切换、加密和前进/后退浏览器测试。Minimal 用自己的语义选择器验证内容一致、链接正确、筛选和解锁可用，不能要求它拥有 `.post-card` 或 `#ui-float-right`。对两个主题分别构建并检查产物无密码/受保护正文/目录泄漏，RSS/Sitemap/SEO 策略一致。人工浏览器检查覆盖默认主题桌面/移动端视觉、第二主题独立布局、正常链接与刷新行为；完成全部所需检查后不重复无关测试。
+Verdant 继续使用现有导航、筛选、加载更多、阅读工具、主题切换、加密和前进/后退浏览器测试。Minimal 用自己的语义选择器验证内容一致、链接正确、筛选和解锁可用，不能要求它拥有 `.post-card` 或 `#ui-float-right`。对两个主题分别构建并检查产物无密码/受保护正文/目录泄漏，RSS/Sitemap/SEO 策略一致。人工浏览器检查覆盖默认主题桌面/移动端视觉、第二主题独立布局、正常链接与刷新行为；完成全部所需检查后不重复无关测试。
 
 **第一阶段十项验收。**
 
-1. 当前 UI 完整成为 Default Theme，视觉与现有核心行为保留。
-2. Core 控制内容和路由，Default 通过公开上下文取数据。
+1. 当前 UI 完整成为 Verdant Theme，视觉与现有核心行为保留。
+2. Core 控制内容和路由，Verdant 通过公开上下文取数据。
 3. Theme API 有明确类型、参数、输出、公开策略和错误约定。
 4. 每个主题有 manifest、engine、capabilities、pages、settings schema。
 5. Loader 可解析内置、本地与 npm 包契约，拒绝无效主题。
-6. Default 与 Minimal 均可完整构建。
+6. Verdant 与 Minimal 均可完整构建。
 7. 两个主题来自同一份内容集合与站点数据，公开文章集合一致。
 8. Minimal 的首页和文章页面明显不同，不依赖现有 Base、Header、Sidebar、Card。
 9. 切换主题仅改变主题配置并重新构建，不改 Markdown/frontmatter。
@@ -364,11 +364,11 @@ Default 继续使用现有导航、筛选、加载更多、阅读工具、主题
 
 | 项目 | 影响/风险 | 控制方式 |
 | --- | --- | --- |
-| theme 字段含义与编辑位置 | 从配色名称变为布局主题，选择入口建议移到 `theme.config.mjs` | `happyhues` 别名、单一来源引用、旧设置兼容映射和清楚的迁移说明 |
-| DTO 与原始 BlogPost | `post.data.*`、Date、ImageMetadata 不再是外部主题契约 | Default 使用适配后的 props；旧宿主 import 暂保留兼容，新增 SDK 明确序列化边界 |
+| theme 字段含义与编辑位置 | 从配色名称变为布局主题，选择入口建议移到 `theme.config.mjs` | `verdant` 简写、单一来源引用、旧设置兼容映射和清楚的迁移说明 |
+| DTO 与原始 BlogPost | `post.data.*`、Date、ImageMetadata 不再是外部主题契约 | Verdant 使用适配后的 props；旧宿主 import 暂保留兼容，新增 SDK 明确序列化边界 |
 | 文件移动 | scoped CSS 标识、相对资源、脚本导入和 TypeScript include 范围可能变化 | 分批迁移与人工 UI 对比；更新 SDK/themes 检查范围，不顺便改样式 |
 | 加密内容适配 | 旧载荷内含默认主题 TOC DOM；新 body 协议会影响解锁、TOC、清理 | 保持加密算法；内容 envelope 独立版本；先验证核心链路，检查两主题产物与解锁后生命周期 |
-| ClientRouter 和滚动恢复 | 导航状态依赖 history index 和 swap 前的高度恢复 | Default 保持现有机制；不强制 Minimal 使用同一客户端路由层 |
+| ClientRouter 和滚动恢复 | 导航状态依赖 history index 和 swap 前的高度恢复 | Verdant 保持现有机制；不强制 Minimal 使用同一客户端路由层 |
 | 全局 CSS/脚本污染 | 新主题可能误带默认配色、隐藏滚动条和按钮逻辑 | 从选中 renderer 的依赖图加载；Minimal 产物和浏览器确认独立 |
 | Optional fallback | 错误 fallback 可能丢失列表、about 内容或 404 语义 | 采用语义兼容 renderer，明确告警，不返回首页冒充成功 |
 | SEO 统一 | 增加 canonical 或规范 title 可能改变已有 head | 保持 robots/RSS/Sitemap 规则；新增 SEO 字段单独审阅，不同步更换 URL/trailing slash 策略 |
@@ -377,4 +377,4 @@ Default 继续使用现有导航、筛选、加载更多、阅读工具、主题
 
 预计不需要的破坏性变更：更换 Astro 或内容引擎、搬动文章目录、更换文章 URL、要求新 frontmatter、替换 nginx 托管或安装数据库。该判断是基于当前源码的迁移方案，不是已经通过两主题运行验证的结论。
 
-**已采用的方案**：按 M1–M5 执行；Default 保留现有网站，Minimal 提供独立布局并附带 Starter；使用小型公开 SDK 和构建期 Loader；保留当前路由；采用显式页面 override，暂不实现继承；已有加密文章属于第一阶段验收范围。
+**已采用的方案**：按 M1–M5 执行；Verdant 保留现有网站，Minimal 提供独立布局并附带 Starter；使用小型公开 SDK 和构建期 Loader；保留当前路由；采用显式页面 override，暂不实现继承；已有加密文章属于第一阶段验收范围。

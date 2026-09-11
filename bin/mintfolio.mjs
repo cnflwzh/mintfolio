@@ -17,7 +17,7 @@ const help = {
 
 用法：mintfolio [--cwd <目录>] <命令>
 
-  create <目录> [--theme default]  创建站点并安装依赖
+  create <目录> [--theme verdant]  创建站点并安装依赖
   init                            补齐当前站点的初始化文件
   upgrade [--version <版本>]       更新当前站点的 Core
   dev / build / preview / sync     开发、构建、预览或同步内容
@@ -59,8 +59,8 @@ const help = {
   sync                            补齐已安装主题的配置
   check [主题]                    校验清单、配置和页面路径
 
-verdant 是 @mintfolio/theme-default 的别名；default / happyhues 继续兼容。
-示例：mintfolio theme install default --use`,
+verdant 是 @mintfolio/theme-verdant 的别名。
+示例：mintfolio theme install verdant --use`,
   config: `用法：mintfolio config <操作> <site|theme>
 
   get <范围> [字段]               查看配置；theme 返回合并默认值后的设置

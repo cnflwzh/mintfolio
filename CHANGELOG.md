@@ -1,8 +1,14 @@
 # 更新记录
 
+## 0.2.0
+
+- 统一 Verdant 的包名、主题 ID、配置文件、类型名称和 CLI 简写。
+- 官方主题使用 `@mintfolio/theme-verdant`，设置保存在 `theme-verdant.config.mjs`。
+
+
 ## 0.1.5
 
-- Default 主题更名为 Verdant，增加 verdant 别名，原别名和配置继续可用。
+- 主题显示名称调整为 Verdant，并增加同名 CLI 简写。
 - 整理公开仓库、README、使用教程和主题开发文档。
 - 增加 GPL-3.0-only 许可证、贡献说明和私密安全报告入口。
 

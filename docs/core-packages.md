@@ -6,7 +6,7 @@ Mintfolio 的组件各自维护 Git 历史，以 npm 包组合。站点只需要
 | --- | --- | --- |
 | [mintfolio](https://github.com/cnflwzh/mintfolio) | @mintfolio/core | CLI、内容、路由、SEO、Minimal |
 | [mintfolio-theme-api](https://github.com/cnflwzh/mintfolio-theme-api) | @mintfolio/theme-api | 公开主题契约 |
-| [mintfolio-theme-verdant](https://github.com/cnflwzh/mintfolio-theme-verdant) | @mintfolio/theme-default | Verdant 视觉主题 |
+| [mintfolio-theme-verdant](https://github.com/cnflwzh/mintfolio-theme-verdant) | @mintfolio/theme-verdant | Verdant 视觉主题 |
 | [mintfolio-theme-starter](https://github.com/cnflwzh/mintfolio-theme-starter) | theme-mintfolio-starter | 主题开发起点 |
 
 Verdant 保留原安装包名和配置文件名，避免影响已有站点。

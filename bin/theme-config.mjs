@@ -5,7 +5,7 @@ import { loadTheme, isWithin } from '../src/engine/loader.mjs';
 import { resolveSettings } from '../src/engine/schema.mjs';
 import { themeConfigPath } from '../src/engine/theme-config.mjs';
 
-const aliases = { verdant: '@mintfolio/theme-default', default: '@mintfolio/theme-default', happyhues: '@mintfolio/theme-default' };
+const aliases = { verdant: '@mintfolio/theme-verdant' };
 
 /** @param {string} name Installed npm package or built-in theme selector. @returns {string} */
 export function normalizeThemeName(name) { return Object.hasOwn(aliases, name) ? aliases[name] : name; }

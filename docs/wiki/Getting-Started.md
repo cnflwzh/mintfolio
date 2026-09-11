@@ -19,7 +19,7 @@ mintfolio dev
 | --- | --- |
 | `site.config.ts` | 标题、正式域名、简介和个人资料 |
 | `theme.config.mjs` | 当前主题选择、显式覆盖 |
-| `theme-default.config.mjs` | Verdant 的专属外观设置 |
+| `theme-verdant.config.mjs` | Verdant 的专属外观设置 |
 | `content/blog/` | Markdown 文章 |
 | `public/` | 直接复制到构建产物的静态资源 |
 | `src/content.config.ts` | 注册 Core 的博客集合 |

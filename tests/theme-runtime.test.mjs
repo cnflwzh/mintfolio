@@ -79,7 +79,7 @@ test('settings apply typed defaults and reject misspellings, invalid values, and
 
 test('local themes, npm aliases and bundled Minimal resolve with explicit overrides', async (t) => {
   const root = await projectFixture(t);
-  const themeRoot = path.join(root, 'src', 'themes', 'default');
+  const themeRoot = path.join(root, 'src', 'themes', 'verdant');
   await writeTheme(themeRoot);
   await mkdir(path.join(root, 'overrides'));
   await writeFile(path.join(root, 'overrides', 'home.astro'), '<main>User home</main>');
@@ -87,13 +87,13 @@ test('local themes, npm aliases and bundled Minimal resolve with explicit overri
   assert.equal(fallback.definition.manifest.id, 'minimal');
   assert.equal(fallback.manifestPath, await realpath(path.join(workspace, 'src/fallback/theme.mjs')));
   await assert.rejects(loadTheme({ root, theme: '@fixture/missing' }), /Cannot find package '@fixture\/missing'/);
-  const aliasPackage = path.join(root, 'node_modules/@mintfolio/theme-default');
+  const aliasPackage = path.join(root, 'node_modules/@mintfolio/theme-verdant');
   await writeTheme(aliasPackage);
-  await writeFile(path.join(aliasPackage, 'package.json'), JSON.stringify({name:'@mintfolio/theme-default',type:'module',exports:{'./theme':'./theme.mjs'}}));
-  const builtin = await loadTheme({ root, theme: 'default' });
-  const legacy = await loadTheme({ root, theme: 'happyhues' });
-  assert.equal(builtin.manifestPath, legacy.manifestPath);
-  const local = await loadTheme({ root, theme: './src/themes/default', settings: { width: 800 }, overrides: { pages: { home: './overrides/home.astro' } } });
+  await writeFile(path.join(aliasPackage, 'package.json'), JSON.stringify({name:'@mintfolio/theme-verdant',type:'module',exports:{'./theme':'./theme.mjs'}}));
+  const builtin = await loadTheme({ root, theme: 'verdant' });
+  const named = await loadTheme({ root, theme: '@mintfolio/theme-verdant' });
+  assert.equal(builtin.manifestPath, named.manifestPath);
+  const local = await loadTheme({ root, theme: './src/themes/verdant', settings: { width: 800 }, overrides: { pages: { home: './overrides/home.astro' } } });
   assert.equal(local.settings.width, 800);
   assert.equal(local.pages.home, await realpath(path.join(root, 'overrides', 'home.astro')));
   assert.equal(local.pages.post, await realpath(path.join(themeRoot, 'pages', 'post.astro')));

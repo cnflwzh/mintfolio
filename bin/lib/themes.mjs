@@ -31,13 +31,13 @@ export async function activeTheme(root, selector) {
   return { ...active, selection, selector: theme, same };
 }
 
-/** @param {string} spec npm package with optional version/range/tag; default and happyhues are aliases. @returns {{name:string,spec:string}} Validated package identity and install spec. */
+/** @param {string} spec npm package with optional version/range/tag; verdant is the official theme alias. @returns {{name:string,spec:string}} Validated package identity and install spec. */
 export function packageSpec(spec) {
   const separator = spec.lastIndexOf('@');
   const split = separator > spec.indexOf('/') && separator > 0;
   const name = normalizeThemeName(split ? spec.slice(0, separator) : spec);
   const version = split ? spec.slice(separator + 1) : '';
-  if (typeof name !== 'string' || !/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name) || name === 'minimal' || (split && !version) || (version && !semver.validRange(version) && !/^[a-z][a-z0-9._-]*$/i.test(version))) throw new Error('请提供 npm 主题包名，可附加 @版本；例如 default 或 @mintfolio/theme-default@0.1.1。');
+  if (typeof name !== 'string' || !/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name) || name === 'minimal' || (split && !version) || (version && !semver.validRange(version) && !/^[a-z][a-z0-9._-]*$/i.test(version))) throw new Error('请提供 npm 主题包名，可附加 @版本；例如 verdant 或 @mintfolio/theme-verdant@0.1.1。');
   return { name, spec: name + (version ? `@${version}` : '') };
 }
 
