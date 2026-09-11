@@ -136,4 +136,4 @@ npx mintfolio preview
 
 发布前确认 `files` 包含 renderer、布局、样式、字体及配置模板；用 `npm pack --dry-run` 查看清单。保留 Core 与 Astro 的 peerDependencies，声明实际使用的依赖，并为字体等资源保留许可证。
 
-Starter 带有 `private: true`，用于避免误发布；准备发布自己的包时移除它，再执行 `npm publish --access public`。这一步会实际公开 npm 包，请使用自己的包名和 npm 账号。GPL-3.0-only 许可要求及完整条款见仓库 LICENSE。
+请先将 Starter 的包名、作者和仓库地址改为自己的信息；如果开发期间设置了 `private: true`，发布时移除它，再执行 `npm publish --access public`。这一步会实际公开 npm 包，请使用自己的包名和 npm 账号。GPL-3.0-only 许可要求及完整条款见仓库 LICENSE。
