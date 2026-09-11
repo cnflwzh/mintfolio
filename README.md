@@ -14,6 +14,39 @@ npm run dev
 
 `init` 生成站点配置、主题配置、内容集合入口和一篇示例文章，不覆盖已有文件。站点不需要复制 Core 的路由或源码。`mintfolio build` 和 `mintfolio preview` 分别构建及预览。
 
+## 命令行工具
+
+Core >= 0.1.2 提供完整 `mintfolio` CLI。在站点中使用 `npx mintfolio`，或通过 `npm install -g @mintfolio/core` 安装全局命令。每个站点仍安装并锁定自己的依赖。
+
+```sh
+mintfolio create my-blog --theme default
+cd my-blog
+mintfolio post new "我的第一篇文章" --slug first-post
+mintfolio post publish first-post
+mintfolio theme install default --use
+mintfolio config set site site.title "我的博客"
+mintfolio config set theme initialPalette 3
+mintfolio config edit theme
+mintfolio doctor
+mintfolio dev
+```
+
+| 命令 | 用途 |
+| --- | --- |
+| `create` / `init` / `upgrade` | 创建站点、补齐文件、更新 Core |
+| `post new/list/publish/draft` | 创建草稿、列文章、切换发布状态 |
+| `theme list/current/install/use` | 查看、安装、启用主题 |
+| `theme init/sync/check` | 生成或校验主题配置 |
+| `config get/set/path/edit/schema` | 查看有效设置、按字段修改、打开文件、查询配置项 |
+| `dev/build/preview/sync` | 运行当前站点安装的 Astro |
+| `doctor` / `check` | 诊断环境、校验配置与内容 |
+
+新文章默认是草稿；配置和草稿状态修改会保留其他内容，并将原文件备份到 `.mintfolio/backups`。重复初始化或生成配置不会覆盖已有文件。主题 `install` 加 `--use` 才会同时切换，旧的 `theme:add` 等命令仍兼容。
+
+使用 `mintfolio <命令> --help` 查看选项。[完整 CLI 文档](docs/cli.md) 包含全局安装、本地仓库、新站点、主题切换、JSON 配置、编辑器和备份恢复说明。
+
+## 主题选择
+
 省略 `theme.config.mjs` 中的 `theme` 字段，或使用 `minimal`，即选择内置 Minimal。显式指定一个不存在的包会报错。Core 不依赖 Default、React 或 Tailwind。
 
 另装一个主题后修改配置：
@@ -60,7 +93,7 @@ src/server/      私有内容、URL、SEO、加密和数据投影
 src/engine/      私有主题解析、校验、上下文与调度
 src/routes/      私有 Astro 路由
 src/fallback/    内置 Minimal，仅通过公共 API 使用 Core
-bin/            init/dev/build/preview/sync 命令
+bin/            CLI 入口、站点/文章/主题/配置操作
 ```
 
 包依赖独立的 `@mintfolio/theme-api` 契约层；应用作者无需额外选择它。主题 API 使用 1.x 契约版本，与 Core 包的 0.1.x 版本分开。

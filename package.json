@@ -1,6 +1,6 @@
 {
   "name": "@mintfolio/core",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "description": "Astro blog engine with public theme APIs and a lightweight built-in fallback",
   "type": "module",
   "engines": {
@@ -13,7 +13,8 @@
     "bin",
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "docs/cli.md"
   ],
   "exports": {
     ".": {
@@ -48,18 +49,20 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@mintfolio/theme-api": "^1.0.0",
     "@astrojs/compiler": "^2.13.1",
+    "@babel/parser": "^7.29.8",
+    "@mintfolio/theme-api": "^1.0.0",
     "astro": "^7.3.2",
     "es-module-lexer": "^1.7.0",
     "import-meta-resolve": "^4.2.0",
-    "semver": "^7.8.5"
+    "semver": "^7.8.5",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@typescript/native": "npm:typescript@^7.0.2",
-    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "@types/node": "^22.20.2",
-    "@types/semver": "^7.8.0"
+    "@types/semver": "^7.8.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "scripts": {
     "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",

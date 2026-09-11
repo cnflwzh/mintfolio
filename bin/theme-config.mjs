@@ -8,7 +8,7 @@ import { themeConfigPath } from '../src/engine/theme-config.mjs';
 const aliases = { default: '@mintfolio/theme-default', happyhues: '@mintfolio/theme-default' };
 
 /** @param {string} name Installed npm package or built-in theme selector. @returns {string} */
-export function normalizeThemeName(name) { return aliases[name] || name; }
+export function normalizeThemeName(name) { return Object.hasOwn(aliases, name) ? aliases[name] : name; }
 
 /** Read package metadata without importing theme code or its configuration template. */
 async function packageAt(directory) {
