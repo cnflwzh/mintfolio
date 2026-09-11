@@ -1,0 +1,39 @@
+---
+import type { PageProps, StaticPageData } from '@mintfolio/theme-api/astro';
+import MinimalLayout from '../layouts/MinimalLayout.astro';
+import type { MinimalSettings } from '../settings';
+
+interface Props extends PageProps<MinimalSettings, StaticPageData> {}
+
+const { theme, page } = Astro.props;
+const profile = page.profile;
+---
+
+<MinimalLayout site={theme.site} navigation={theme.navigation} homeUrl={theme.urls.home()} seo={page.seo} settings={theme.settings}>
+  <article class="minimal-article">
+    <header>
+      <p class="minimal-kicker">{page.id}</p>
+      <h1>{page.title}</h1>
+      <p>{page.description}</p>
+    </header>
+    <div class="minimal-prose">
+      <p>{profile.bio}</p>
+      <dl>
+        <dt>姓名</dt>
+        <dd>{profile.name}</dd>
+        <dt>所在地</dt>
+        <dd>{profile.location}</dd>
+        <dt>联系方式</dt>
+        <dd><a href={`mailto:${theme.site.contact.email}`}>{theme.site.contact.email}</a></dd>
+      </dl>
+      {theme.site.social.length > 0 && (
+        <section aria-labelledby="minimal-social-title">
+          <h2 id="minimal-social-title">其他平台</h2>
+          <ul>
+            {theme.site.social.map((social) => <li><a href={social.url}>{social.platform}</a></li>)}
+          </ul>
+        </section>
+      )}
+    </div>
+  </article>
+</MinimalLayout>

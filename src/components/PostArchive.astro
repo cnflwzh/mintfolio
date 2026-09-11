@@ -1,0 +1,48 @@
+---
+import type { PostFilters, PostSummary, TaxonomyCount } from '@mintfolio/theme-api';
+interface Props {
+  /** Safe public metadata supplied by Core's page/context APIs. */
+  posts: PostSummary[];
+  tags: TaxonomyCount[];
+  categories: TaxonomyCount[];
+  filters?: Partial<PostFilters>;
+  language?: string;
+  /** Omit to display every match; supply a positive integer to enable load more. */
+  pageSize?: number;
+}
+const { posts, tags, categories, filters = {}, language = 'zh-CN', pageSize } = Astro.props;
+const formatDate = (value: string): string => new Intl.DateTimeFormat(language, { dateStyle: 'medium' }).format(new Date(value));
+---
+<section class="mintfolio-archive" data-core-archive data-archive data-posts={JSON.stringify(posts)} data-page-size={pageSize}>
+  <form class="mintfolio-filters" data-filter-form aria-label="筛选文章">
+    <label>搜索<input name="q" type="search" value={filters.q ?? ''} autocomplete="off" /></label>
+    <label>标签<select name="tag"><option value="">全部标签</option>{tags.map((tag) => <option value={tag.label} selected={filters.tag === tag.label}>{tag.label} ({tag.count})</option>)}</select></label>
+    <label>分类<select name="category"><option value="">全部分类</option>{categories.map((term) => <option value={term.label} selected={filters.category === term.label}>{term.label} ({term.count})</option>)}</select></label>
+  </form>
+  <p data-filter-status aria-live="polite"></p>
+  <ol class="mintfolio-posts">
+    {posts.map((post) => <li data-post-id={post.id}>
+      <h2><a href={post.url}>{post.title}</a></h2>
+      <p><time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time>{post.protected ? ' · 受保护' : ''}</p>
+      <p>{post.description}</p>
+      <div class="mintfolio-terms"><a href={post.category.url}>{post.category.label}</a>{post.tags.map((tag) => <a href={tag.url}>#{tag.label}</a>)}</div>
+    </li>)}
+  </ol>
+  <button type="button" data-load-more hidden>加载更多</button>
+</section>
+<style>
+  .mintfolio-filters { display: grid; gap: .8rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mintfolio-filters label { display: grid; gap: .25rem; }
+  .mintfolio-filters :is(input,select) { min-width: 0; font: inherit; padding: .45rem; }
+  .mintfolio-posts { list-style: none; margin: 0; padding: 0; }
+  .mintfolio-posts > li { padding: 1rem 0; border-top: 1px solid #8886; }
+  .mintfolio-posts h2 { font-size: 1.15rem; margin: 0; }
+  .mintfolio-posts p { margin: .4rem 0; }
+  .mintfolio-terms { display: flex; flex-wrap: wrap; gap: .75rem; }
+  .mintfolio-archive [hidden] { display: none; }
+  @media (max-width: 620px) { .mintfolio-filters { grid-template-columns: 1fr; } }
+</style>
+<script>
+  import { bindPostArchive, onPage } from '@mintfolio/core/client';
+  onPage('[data-core-archive]', (root, scope) => bindPostArchive(root, scope));
+</script>

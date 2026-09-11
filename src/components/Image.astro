@@ -1,0 +1,28 @@
+---
+import { Image, type LocalImageProps } from 'astro:assets';
+import type { HTMLAttributes } from 'astro/types';
+import type { PublicImage } from '@mintfolio/theme-api';
+
+/**
+ * Images declare display dimensions, including
+ * remote URLs. Keep the SDK's local metadata intact so Astro can optimize it.
+ * Responsive widths and the remaining transform options are forwarded to Astro.
+ */
+type Props = Omit<HTMLAttributes<'img'>, 'src' | 'alt' | 'width' | 'height' | 'srcset'>
+  & Pick<LocalImageProps, 'layout' | 'widths' | 'quality' | 'format' | 'priority' | 'fit' | 'position' | 'background'>
+  & {
+    src: string | PublicImage;
+    alt: string;
+    width: number;
+    height: number;
+  };
+
+// Forward every other attribute, including parent-generated scoped CSS markers.
+// Narrowing each branch lets Astro select its remote/local prop contract safely.
+const { src, ...attributes } = Astro.props;
+const placeholder = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#eee"/><circle cx="100" cy="75" r="30" fill="#aaa"/><path d="M40 185v-15a60 60 0 0 1 120 0v15" fill="#aaa"/></svg>');
+---
+
+{!src ? <img src={placeholder} {...attributes} /> : typeof src === 'string'
+  ? <Image src={src} {...attributes} />
+  : <Image src={src} {...attributes} />}

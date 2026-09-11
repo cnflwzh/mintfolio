@@ -1,0 +1,109 @@
+.mintfolio-minimal {
+  color-scheme: light;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  background: #fcfcfa;
+  color: #171717;
+}
+
+.mintfolio-minimal * { box-sizing: border-box; }
+
+html.mintfolio-minimal { min-width: 320px; }
+
+.mintfolio-minimal body {
+  margin: 0;
+  min-height: 100vh;
+  background: #fcfcfa;
+  color: #171717;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.mintfolio-minimal a { color: var(--minimal-accent); text-underline-offset: 0.18em; }
+.mintfolio-minimal a:hover { text-decoration-thickness: 2px; }
+
+.mintfolio-minimal :is(button, input, select) { font: inherit; }
+
+.mintfolio-minimal .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.minimal-shell {
+  width: min(calc(100% - 2rem), var(--minimal-width));
+  margin: 0 auto;
+  padding: 2.5rem 0 4rem;
+}
+
+.minimal-site-name { color: inherit; font-weight: 700; text-decoration: none; }
+
+.minimal-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.65rem 0 3.25rem;
+}
+
+.minimal-navigation a { color: #4c4c4c; }
+
+.minimal-main > * + * { margin-top: 2.25rem; }
+
+.minimal-kicker, .minimal-meta, .minimal-empty, .minimal-footer {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.minimal-title {
+  max-width: 22ch;
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.065em;
+}
+
+.minimal-description { max-width: 58ch; margin: 1.25rem 0 0; }
+
+.minimal-post-list { list-style: none; margin: 0; padding: 0; }
+.minimal-post-list > li { border-top: 1px solid #d8d8d4; padding: 1.1rem 0 1.2rem; }
+.minimal-post-list > li:last-child { border-bottom: 1px solid #d8d8d4; }
+.minimal-post-list h2 { margin: 0; font-size: 1.1rem; line-height: 1.45; }
+.minimal-post-list p { margin: 0.35rem 0 0; color: #4c4c4c; }
+
+.minimal-terms { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; margin-top: 0.45rem; font-size: 0.85rem; }
+.minimal-terms a { color: #5b5b5b; }
+
+.minimal-article header { border-bottom: 1px solid #d8d8d4; padding-bottom: 1.5rem; }
+.minimal-article h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.15; letter-spacing: -0.055em; }
+.minimal-article header p { margin: 0.85rem 0 0; }
+
+.minimal-prose { margin-top: 2.25rem; }
+.minimal-prose :is(h2, h3, h4) { line-height: 1.25; margin-top: 2.4em; }
+.minimal-prose img { height: auto; max-width: 100%; }
+.minimal-prose pre { max-width: 100%; overflow: auto; padding: 1rem; background: #efefea; }
+.minimal-prose blockquote { border-left: 2px solid #aaa; margin-left: 0; padding-left: 1rem; color: #4c4c4c; }
+
+.minimal-protected { border: 1px solid #c8c8c2; padding: 1.25rem; }
+.minimal-protected p { margin-top: 0; }
+.minimal-protected form { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+.minimal-protected input { min-width: min(100%, 18rem); border: 1px solid #999; border-radius: 0; padding: 0.45rem 0.55rem; }
+.minimal-protected button { border: 1px solid var(--minimal-accent); border-radius: 0; background: var(--minimal-accent); color: white; cursor: pointer; padding: 0.45rem 0.75rem; }
+.minimal-protected button[hidden], .minimal-protected [hidden] { display: none; }
+.minimal-protected .minimal-relock { background: transparent; color: var(--minimal-accent); }
+.minimal-protected-error { color: #a60000; }
+
+.minimal-filter-form { display: grid; gap: 0.8rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.minimal-filter-form label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
+.minimal-filter-form input, .minimal-filter-form select { min-width: 0; border: 1px solid #999; border-radius: 0; background: #fff; padding: 0.45rem; }
+.minimal-filter-status { color: #666; font-size: 0.9rem; }
+
+.minimal-pager { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #d8d8d4; padding-top: 1.25rem; }
+.minimal-footer { border-top: 1px solid #d8d8d4; margin-top: 4rem; padding-top: 1rem; }
+
+@media (max-width: 620px) {
+  .minimal-shell { padding-top: 1.5rem; }
+  .minimal-navigation { margin-bottom: 2.25rem; }
+  .minimal-filter-form { grid-template-columns: 1fr; }
+}

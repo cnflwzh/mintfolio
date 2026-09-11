@@ -1,0 +1,7 @@
+---
+import SeoHead from '@mintfolio/theme-api/SeoHead.astro';
+import type { SeoData } from '@mintfolio/theme-api/astro';
+interface Props { /** SEO policy already computed by Core. */ seo: SeoData; }
+const { seo } = Astro.props;
+---
+<SeoHead seo={seo} />

@@ -1,0 +1,13 @@
+---
+import type { ListPageData, PageProps } from '@mintfolio/core/astro';
+import PostArchive from '@mintfolio/core/components/PostArchive.astro';
+import MinimalLayout from '../layouts/MinimalLayout.astro';
+import type { MinimalSettings } from '../settings';
+interface Props extends PageProps<MinimalSettings, ListPageData> {}
+const { theme, page } = Astro.props;
+const [tags, categories] = await Promise.all([theme.taxonomy.tags(), theme.taxonomy.categories()]);
+---
+<MinimalLayout site={theme.site} navigation={theme.navigation} homeUrl={theme.urls.home()} seo={page.seo} settings={theme.settings}>
+  <header><p class="minimal-kicker">文章归档</p><h1 class="minimal-title">{page.title}</h1><p class="minimal-description">{page.description}</p></header>
+  <PostArchive posts={page.posts} tags={tags} categories={categories} filters={page.filters} language={theme.site.language} />
+</MinimalLayout>

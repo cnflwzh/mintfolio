@@ -1,0 +1,9 @@
+---
+import { activeTheme, getRenderer } from 'virtual:mintfolio/theme';
+import { createThemeContext } from '../../engine/context';
+import { archivePage } from '../../server/pages';
+const theme = await createThemeContext(activeTheme);
+const page = await archivePage(theme);
+const Renderer = getRenderer('archive');
+---
+<Renderer theme={theme} page={page} />

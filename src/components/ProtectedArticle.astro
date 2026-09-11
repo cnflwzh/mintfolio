@@ -1,0 +1,56 @@
+---
+import type { ArticleBody } from '@mintfolio/theme-api/astro';
+interface Props {
+  /** Core supplies only authenticated ciphertext, never the password or plaintext. */
+  body: Extract<ArticleBody, { kind: 'protected' }>;
+}
+const { body } = Astro.props;
+---
+<section class="mintfolio-protected" data-core-protected data-protected-article data-payload={JSON.stringify(body.payload)} data-post-id={body.postId} aria-label="受保护的文章">
+  <p data-protected-intro>这篇文章受保护。请输入密码以在当前标签页中阅读。</p>
+  <form data-protected-form>
+    <label>文章密码<input data-protected-password type="password" autocomplete="current-password" required /></label>
+    <button type="submit">解锁文章</button>
+  </form>
+  <p data-protected-error role="alert" hidden></p>
+  <div class="mintfolio-prose" data-protected-output hidden tabindex="-1"></div>
+  <button type="button" data-protected-relock hidden>重新锁定</button>
+</section>
+<style>
+  .mintfolio-protected { border: 1px solid #8888; padding: 1.25rem; }
+  .mintfolio-protected form, .mintfolio-protected label { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
+  .mintfolio-protected :is(input,button) { font: inherit; max-width: 100%; padding: .4rem .65rem; }
+  .mintfolio-protected [hidden] { display: none; }
+  .mintfolio-protected [role="alert"] { color: #a60000; }
+  .mintfolio-prose { overflow-wrap: anywhere; }
+  .mintfolio-prose :global(img) { max-width: 100%; height: auto; }
+  .mintfolio-prose :global(pre) { overflow: auto; }
+</style>
+<script>
+  import { createProtectedArticleController, onPage } from '@mintfolio/core/client';
+  onPage('[data-core-protected]', (root, scope) => {
+    const form = root.querySelector<HTMLFormElement>('[data-protected-form]');
+    const input = root.querySelector<HTMLInputElement>('[data-protected-password]');
+    const output = root.querySelector<HTMLElement>('[data-protected-output]');
+    const status = root.querySelector<HTMLElement>('[data-protected-error]');
+    const button = form?.querySelector<HTMLButtonElement>('button');
+    const relock = root.querySelector<HTMLButtonElement>('[data-protected-relock]');
+    if (!form || !input || !output || !status || !button || !relock) return;
+    const controller = createProtectedArticleController({
+      payload: JSON.parse(root.dataset.payload ?? 'null'), postId: root.dataset.postId ?? '', signal: scope.signal,
+      onUnlock: ({ fragment }) => { output.replaceChildren(fragment); input.value = ''; },
+      onClear: () => { output.replaceChildren(); input.value = ''; status.textContent = ''; status.hidden = true; },
+      onState: (state) => {
+        input.disabled = button.disabled = state === 'unlocking';
+        button.textContent = state === 'unlocking' ? '正在解锁…' : '解锁文章';
+        form.hidden = state === 'unlocked';
+        output.hidden = relock.hidden = state !== 'unlocked';
+        if (state === 'unlocked') output.focus({ preventScroll: true });
+        form.setAttribute('aria-busy', String(state === 'unlocking'));
+      },
+      onError: () => { status.textContent = '无法解锁文章，请检查密码后重试。'; status.hidden = false; },
+    });
+    form.addEventListener('submit', (event) => { event.preventDefault(); void controller.unlock(input.value); }, { signal: scope.signal });
+    relock.addEventListener('click', () => { controller.lock(); input.focus(); }, { signal: scope.signal });
+  });
+</script>

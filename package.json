@@ -1,0 +1,73 @@
+{
+  "name": "@mintfolio/core",
+  "version": "0.1.0",
+  "description": "Astro blog engine with public theme APIs and a lightweight built-in fallback",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "bin": {
+    "mintfolio": "./bin/mintfolio.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/integration.d.ts",
+      "import": "./src/integration.mjs"
+    },
+    "./config": {
+      "types": "./dist/public/config.d.ts",
+      "import": "./dist/public/config.js"
+    },
+    "./theme": {
+      "types": "./dist/public/theme.d.ts",
+      "import": "./dist/public/theme.js"
+    },
+    "./astro": {
+      "types": "./dist/public/astro.d.ts",
+      "import": "./dist/public/astro.js"
+    },
+    "./client": {
+      "types": "./dist/public/client.d.ts",
+      "import": "./dist/public/client.js"
+    },
+    "./search": {
+      "types": "./dist/public/search.d.ts",
+      "import": "./dist/public/search.js"
+    },
+    "./content": {
+      "types": "./src/content.d.ts",
+      "import": "./src/content.mjs"
+    },
+    "./components/*": "./src/components/*",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@mintfolio/theme-api": "^1.0.0",
+    "@astrojs/compiler": "^2.13.1",
+    "astro": "^7.3.2",
+    "es-module-lexer": "^1.7.0",
+    "import-meta-resolve": "^4.2.0",
+    "semver": "^7.8.5"
+  },
+  "devDependencies": {
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "@types/node": "^22.20.2",
+    "@types/semver": "^7.8.0"
+  },
+  "scripts": {
+    "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+    "check": "npm run build",
+    "prepack": "npm run build",
+    "test": "npm run test:unit && npm run test:boundaries",
+    "test:unit": "npm run build && node --experimental-strip-types --test tests/*.test.mjs",
+    "test:boundaries": "npm run build && node tools/verify-theme-boundaries.mjs",
+    "deps:update": "node tools/update-local-deps.mjs"
+  }
+}

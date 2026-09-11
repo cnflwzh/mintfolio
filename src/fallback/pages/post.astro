@@ -1,0 +1,41 @@
+---
+import type { PageProps, PostPageData } from '@mintfolio/theme-api/astro';
+import ProtectedArticle from '@mintfolio/core/components/ProtectedArticle.astro';
+import MinimalLayout from '../layouts/MinimalLayout.astro';
+import type { MinimalSettings } from '../settings';
+
+interface Props extends PageProps<MinimalSettings, PostPageData> {}
+
+const { theme, page } = Astro.props;
+const formatDate = (value: string): string => new Intl.DateTimeFormat(theme.site.language, {
+  dateStyle: 'long',
+}).format(new Date(value));
+const protectedBody = page.body.kind === 'protected' ? page.body : undefined;
+---
+
+<MinimalLayout site={theme.site} navigation={theme.navigation} homeUrl={theme.urls.home()} seo={page.seo} settings={theme.settings}>
+  <article class="minimal-article">
+    <header>
+      <p class="minimal-kicker"><a href={page.post.category.url}>{page.post.category.label}</a></p>
+      <h1>{page.post.title}</h1>
+      <p class="minimal-meta"><time datetime={page.post.publishedAt}>{formatDate(page.post.publishedAt)}</time></p>
+      <p>{page.post.description}</p>
+      {page.post.tags.length > 0 && (
+        <div class="minimal-terms" aria-label="标签">
+          {page.post.tags.map((tag) => <a href={tag.url}>#{tag.label}</a>)}
+        </div>
+      )}
+    </header>
+
+    {page.body.kind === 'public' ? (
+      <div class="minimal-prose" set:html={page.body.html} />
+    ) : protectedBody && (
+      <ProtectedArticle body={protectedBody} />
+    )}
+  </article>
+
+  <nav class="minimal-pager" aria-label="相邻文章">
+    <span>{page.previous ? <a href={page.previous.url}>← {page.previous.title}</a> : ''}</span>
+    <span>{page.next ? <a href={page.next.url}>{page.next.title} →</a> : ''}</span>
+  </nav>
+</MinimalLayout>

@@ -1,0 +1,9 @@
+---
+import { activeTheme, getRenderer } from 'virtual:mintfolio/theme';
+import { createThemeContext } from '../engine/context';
+import { notFoundPage } from '../server/pages';
+const theme = await createThemeContext(activeTheme);
+const page = notFoundPage(theme);
+const Renderer = getRenderer('notFound');
+---
+<Renderer theme={theme} page={page} />

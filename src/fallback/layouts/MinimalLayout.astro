@@ -1,0 +1,45 @@
+---
+import SeoHead from '@mintfolio/theme-api/SeoHead.astro';
+import '../styles/minimal.css';
+import type { MinimalSettings } from '../settings';
+import type { PublicSite, NavigationLink } from '@mintfolio/theme-api';
+import type { SeoData } from '@mintfolio/theme-api/astro';
+
+interface Props {
+  /** Public, projected site information supplied by the runtime. */
+  readonly site: Pick<PublicSite, 'title' | 'profile'>;
+  /** Core-owned destinations that the theme may render in its own navigation. */
+  readonly navigation: readonly NavigationLink[];
+  /** Core-owned canonical home address; never reconstructed from a route string. */
+  readonly homeUrl: string;
+  /** Metadata calculated by Core; the theme does not infer canonical URLs itself. */
+  readonly seo: SeoData;
+  /** Validated Minimal theme settings. */
+  readonly settings: Partial<MinimalSettings> | Record<string, unknown>;
+}
+
+const { site, navigation, homeUrl, seo, settings } = Astro.props;
+// An optional-page fallback can receive another theme's settings. Use only
+// Minimal's own validated primitives and apply its defaults when absent.
+const width = typeof settings.maxWidth === 'number' && Number.isFinite(settings.maxWidth) ? Math.max(480, Math.min(1200, settings.maxWidth)) : 760;
+const accent = typeof settings.accentColor === 'string' && /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(settings.accentColor) ? settings.accentColor : '#2255aa';
+---
+
+<!doctype html>
+<html lang={seo.language} class="mintfolio-minimal">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SeoHead seo={seo} />
+  </head>
+  <body style={`--minimal-width: ${width}px; --minimal-accent: ${accent};`}>
+    <div class="minimal-shell">
+      <a class="minimal-site-name" href={homeUrl}>{site.title}</a>
+      <nav class="minimal-navigation" aria-label="网站导航">
+        {navigation.map((item) => <a href={item.url}>{item.label}</a>)}
+      </nav>
+      <main class="minimal-main"><slot /></main>
+      <footer class="minimal-footer">{site.profile.signature ?? site.profile.name}</footer>
+    </div>
+  </body>
+</html>
