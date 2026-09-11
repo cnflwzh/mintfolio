@@ -1,6 +1,6 @@
 {
   "name": "@mintfolio/core",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "A Markdown blog and personal site toolkit, built with Astro.",
   "type": "module",
   "engines": {

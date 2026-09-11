@@ -58,17 +58,17 @@ CLI 的文章命令采用默认 `content/blog` 目录。自行更换内容集合
 ```sh
 mintfolio theme list
 mintfolio theme current
-mintfolio theme install default
+mintfolio theme install verdant
 mintfolio theme install @example/theme@1.2.3 --use
-mintfolio theme use default
+mintfolio theme use verdant
 mintfolio theme use minimal
 mintfolio theme use ./my-theme
-mintfolio theme init default
+mintfolio theme init verdant
 mintfolio theme sync
 mintfolio theme check
 ```
 
-`install` 接收 npm 包名，可附加版本、范围或标签；`default` 和 `happyhues` 都映射到 `@mintfolio/theme-default`。安装后生成完整主题配置，只有加 `--use` 才同时切换。再次生成配置保留已有文件。
+`install` 接收 npm 包名，可附加版本、范围或标签；`verdant` 映射到 `@mintfolio/theme-verdant`。安装后生成完整主题配置，只有加 `--use` 才同时切换。再次生成配置保留已有文件。
 
 `use` 校验目标主题并修改 `theme.config.mjs`，保留显式页面 overrides。旧的内联 `settings` 会先迁移到旧主题自己的配置文件，再清空内联覆盖，因此切回旧主题时仍保留个性化设置。动态内联表达式不能自动迁移，CLI 会明确报错且不切换主题。
 

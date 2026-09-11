@@ -86,7 +86,6 @@ export default function themeRuntime(selection = {}, engine = {}) {
         addWatchFile(active.themeConfigFile);
         for (const filename of active.manifestDependencies) addWatchFile(filename);
         logger.info(`Theme: ${active.definition.manifest.name} ${active.definition.manifest.version}`);
-        if (themeName === 'happyhues' || themeName === 'default') logger.warn('Use the installed package name "@mintfolio/theme-default". Only Minimal is bundled with Core.');
         const optionalMissing = ['page', 'archive', 'notFound'].filter((kind) => !active.pages[kind]);
         if (optionalMissing.length) logger.info(`Using lightweight Minimal renderers for: ${optionalMissing.join(', ')}`);
         /** @type {Array<keyof import('@mintfolio/theme-api').ThemeCapabilities>} */

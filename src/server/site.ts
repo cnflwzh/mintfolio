@@ -11,7 +11,7 @@ export function publicImage(source: string | ImageMetadata): string | PublicImag
   return { src: source.src, width: source.width, height: source.height, format: source.format };
 }
 
-/** Shared author/site content, independent of Default's sidebar and other UI. */
+/** Shared author/site content, independent of Verdant's sidebar and other UI. */
 export function getPublicSite(): PublicSite {
   return {
     title: config.site.title,

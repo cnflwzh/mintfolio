@@ -9,7 +9,7 @@ mintfolio theme list
 mintfolio theme check
 ```
 
-Verdant 的 npm 包名保留为 `@mintfolio/theme-default`，主题 ID 为 `default`；`verdant` 是便于使用的别名。因此其配置文件仍叫 `theme-default.config.mjs`。
+Verdant 的 npm 包名是 `@mintfolio/theme-verdant`，主题 ID 为 `verdant`，配置文件名为 `theme-verdant.config.mjs`。CLI 可使用 `verdant` 简写。
 
 ## 保存每个主题的设置
 
@@ -17,11 +17,11 @@ Verdant 的 npm 包名保留为 `@mintfolio/theme-default`，主题 ID 为 `defa
 
 ```js
 export default {
-  theme: '@mintfolio/theme-default',
+  theme: '@mintfolio/theme-verdant',
 };
 ```
 
-`theme-default.config.mjs` 保存 Verdant 的设置。安装时 Core 会复制带注释的模板；已有文件始终保留。也可手动补齐：
+`theme-verdant.config.mjs` 保存 Verdant 的设置。安装时 Core 会复制带注释的模板；已有文件始终保留。也可手动补齐：
 
 ```sh
 mintfolio theme init verdant

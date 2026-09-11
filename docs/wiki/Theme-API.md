@@ -2,7 +2,7 @@
 
 Mintfolio 的布局主题是一个独立模块：Core 负责内容公开策略、URL、路由、SEO 和受保护文章的密文，主题只负责用公开数据渲染页面。主题可以拥有任意 HTML、CSS 和浏览器交互，不需要也不能继承默认主题的布局。
 
-`@mintfolio/core` 0.1.x 提供完整引擎和主题公共入口，内部依赖 `@mintfolio/theme-api` 1.x 契约层。各组件独立发布。组件关系见 [Core 与主题包](https://github.com/cnflwzh/mintfolio/blob/main/docs/core-packages.md)。
+`@mintfolio/core` 0.2.x 提供完整引擎和主题公共入口，内部依赖 `@mintfolio/theme-api` 1.x 契约层。各组件独立发布。组件关系见 [Core 与主题包](https://github.com/cnflwzh/mintfolio/blob/main/docs/core-packages.md)。
 
 ## 公开入口与边界
 
@@ -212,7 +212,7 @@ container.replaceChildren(fragment);
 
 ## 选择、覆盖和作者工作流
 
-站点 `theme.config.mjs` 可以是 `export default {}`：没有主题选择时使用 Core 自带 Minimal。也可显式选择 `minimal`、相对主题目录或已安装 npm 包。Verdant 必须单独安装，通过 `@mintfolio/theme-default` 选择；`verdant`/`default`/`happyhues` 只作兼容别名，不会自动安装。
+站点 `theme.config.mjs` 可以是 `export default {}`：没有主题选择时使用 Core 自带 Minimal。也可显式选择 `minimal`、相对主题目录或已安装 npm 包。Verdant 必须单独安装，通过 `@mintfolio/theme-verdant` 选择；`verdant` 是其简写，不会自动安装。
 
 npm 包通过 `exports` 导出 `./theme`。显式包名无法解析时构建失败。`MINTFOLIO_THEME` 切换到不同主题时读取新主题自己的配置文件及默认 settings，并忽略原主题的内联 settings/overrides；与原主题名相同则保留原配置。
 
@@ -224,20 +224,20 @@ npm 包通过 `exports` 导出 `./theme`。显式包名无法解析时构建失�
 
 ```json
 {
-  "mintfolio": { "configTemplate": "./config/theme-default.config.mjs" },
+  "mintfolio": { "configTemplate": "./config/theme-verdant.config.mjs" },
   "files": ["theme.mjs", "config", "pages", "styles"]
 }
 ```
 
 路径相对于主题包根目录，必须指向包内 `.mjs` 文件并纳入打包白名单。模板导出合法设置对象，可以保留详细注释和空数组的条目示例；不要读取宿主文件。Verdant 提供完整模板和公开设置类型。没有自定义模板的主题可通过 `theme:init` 从清单自动生成带字段说明的完整默认配置。
 
-`npx mintfolio theme:add <npm-package>` 负责安装并立即生成配置，`default` 为官方主题别名；它不自动更换站点当前选择。`theme:init [theme]` 手动生成指定主题配置，`theme:sync` 为直接依赖中声明了模板的主题补齐文件。`init/dev/build/sync` 也会自动补齐。任何已有文件都会保留，升级不会覆盖用户改动；新设置依旧由清单默认值补齐。
+`npx mintfolio theme:add <npm-package>` 负责安装并立即生成配置，`verdant` 为官方主题简写；它不自动更换站点当前选择。`theme:init [theme]` 手动生成指定主题配置，`theme:sync` 为直接依赖中声明了模板的主题补齐文件。`init/dev/build/sync` 也会自动补齐。任何已有文件都会保留，升级不会覆盖用户改动；新设置依旧由清单默认值补齐。
 
 直接使用 `npm install <theme>` 时，配置在下一次运行 Core 或执行 `theme:init` 时生成。配置生成不依赖 npm 的依赖生命周期脚本；主题包只拥有模板，宿主文件写入和读取由 Core 负责。
 
 `overrides.pages` 是相对项目根目录的显式 `.astro` 覆盖，例如 `{ pages: { archive: './my-theme/archive.astro' } }`。覆盖同样必须在项目内，不能指向 Core、路由或主题 Runtime。没有隐式同名文件覆盖，也没有 `extends`/主题继承。
 
-独立作者可从 [Theme Starter](https://github.com/cnflwzh/mintfolio-theme-starter) 开始。主题包应包含 `type: "module"`、`exports: { "./theme": "./theme.mjs" }`、完整的 `files` 白名单，以及 `@mintfolio/core: ^0.1.0` 与 `astro: ^7.3.2` 的 peerDependencies。主题使用底层 SDK 时额外声明该依赖。开发与包职责见 [组件说明](https://github.com/cnflwzh/mintfolio/blob/main/docs/core-packages.md)。
+独立作者可从 [Theme Starter](https://github.com/cnflwzh/mintfolio-theme-starter) 开始。主题包应包含 `type: "module"`、`exports: { "./theme": "./theme.mjs" }`、完整的 `files` 白名单，以及 `@mintfolio/core: ^0.2.0` 与 `astro: ^7.3.2` 的 peerDependencies。主题使用底层 SDK 时额外声明该依赖。开发与包职责见 [组件说明](https://github.com/cnflwzh/mintfolio/blob/main/docs/core-packages.md)。
 
 
 ## 本地检查
