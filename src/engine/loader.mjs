@@ -7,6 +7,7 @@ import { resolve as resolveImport } from 'import-meta-resolve';
 import semver from 'semver';
 import { PAGE_KINDS, validateTheme, resolveSettings } from './schema.mjs';
 import { checkManifestImports } from './import-boundary.mjs';
+import { mergeThemeSettings, readThemeSettings, themeConfigPath } from './theme-config.mjs';
 
 let manifestRevision = 0;
 
@@ -75,9 +76,11 @@ async function resolvePage(source, directory, kind) {
 /**
  * Load a single theme for the current build. The caller owns routes and Vite
  * compilation; this function never runs Astro components or writes resources.
- * @param {{root:string, theme?:string, settings?:unknown, overrides?:{pages?:Record<string,string>}, fresh?:boolean}} options
+ * @param {{root:string, theme?:string, settings?:unknown, overrides?:{pages?:Record<string,string>}, fresh?:boolean, readUserConfig?:boolean}} options
+ * readUserConfig is disabled only while creating configuration files; normal loads
+ * always combine the host's theme-specific file with explicit inline settings.
  */
-export async function loadTheme({ root, theme, settings = {}, overrides = {}, fresh = false }) {
+export async function loadTheme({ root, theme, settings = {}, overrides = {}, fresh = false, readUserConfig = true }) {
   const manifestPath = await resolveManifest(theme, root);
   const themeRoot = path.dirname(manifestPath);
   // Native ESM loading does not run Vite's hooks. Inspect its local dependency
@@ -87,7 +90,9 @@ export async function loadTheme({ root, theme, settings = {}, overrides = {}, fr
   // Development restarts need a fresh manifest, not Node's old ESM module entry.
   if (fresh) entryUrl.searchParams.set('revision', `${Date.now()}-${++manifestRevision}`);
   const definition = validateTheme((await import(entryUrl.href)).default, manifestPath);
-  const resolvedSettings = resolveSettings(definition, settings);
+  const userConfig = readUserConfig ? await readThemeSettings(root, definition.manifest.id)
+    : { filename: themeConfigPath(root, definition.manifest.id), settings: {} };
+  const resolvedSettings = resolveSettings(definition, mergeThemeSettings(userConfig.settings, settings));
   /** @type {Record<string,string>} */
   const pages = {};
   for (const [kind, source] of Object.entries(definition.pages)) {
@@ -105,5 +110,5 @@ export async function loadTheme({ root, theme, settings = {}, overrides = {}, fr
     overrideRoots.push(path.dirname(filename));
     overrideEntries.push(filename);
   }
-  return { definition, settings: resolvedSettings, pages, manifestPath, manifestDependencies, themeRoot, overrideRoots, overrideEntries };
+  return { definition, settings: resolvedSettings, pages, manifestPath, manifestDependencies, themeRoot, overrideRoots, overrideEntries, themeConfigFile: userConfig.filename };
 }

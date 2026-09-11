@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
+import { createThemeConfig, syncThemeConfigs, reportThemeConfigs, normalizeThemeName } from './theme-config.mjs';
 
 /** Write scaffold files exclusively: initialization never overwrites site content. */
 async function writeNew(root, relative, source) {
@@ -57,12 +58,32 @@ tags: ["开始"]
   pkg.type = 'module';
   pkg.scripts = { dev: 'mintfolio dev', build: 'mintfolio build', preview: 'mintfolio preview', ...pkg.scripts };
   await writeFile(filename, JSON.stringify(pkg, null, 2) + '\n');
+  reportThemeConfigs(await syncThemeConfigs(root));
   process.stdout.write('Ready. Edit site.config.ts, then run npm run dev.\n');
 }
 
 const [command = 'help', ...args] = process.argv.slice(2);
 try {
   if (command === 'init') await initialize(process.cwd());
+  else if (command === 'theme:sync') reportThemeConfigs(await syncThemeConfigs(process.cwd()));
+  else if (command === 'theme:init') {
+    const selection = args[0] ? null : (await import(pathToFileURL(path.join(process.cwd(),'theme.config.mjs')).href)).default;
+    const result = await createThemeConfig(process.cwd(), args[0] || selection?.theme || 'minimal');
+    process.stdout.write(`${result.created ? 'Created' : 'Preserved'} ${path.basename(result.filename)}\n`);
+  }
+  else if (command === 'theme:add') {
+    const theme = normalizeThemeName(args[0] || '');
+    if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(theme) || theme === 'minimal') throw new Error('Usage: npx mintfolio theme:add <npm-theme-package>');
+    if (!process.env.npm_execpath) throw new Error('Run theme:add through npx mintfolio theme:add <package>');
+    const child = spawn(process.execPath, [process.env.npm_execpath,'install',theme], {cwd:process.cwd(),stdio:'inherit',shell:false,windowsHide:true});
+    const code = await new Promise((resolve,reject)=>{ child.once('error',reject); child.once('exit',resolve); });
+    if (code !== 0) process.exitCode = code ?? 1;
+    else {
+      const result = await createThemeConfig(process.cwd(),theme);
+      process.stdout.write(`${result.created ? 'Created' : 'Preserved'} ${path.basename(result.filename)}\n`);
+      process.stdout.write(`Select this theme in theme.config.mjs: export default { theme: ${JSON.stringify(theme)} };\n`);
+    }
+  }
   else if (command === 'theme:check') {
     const { loadTheme } = await import('../src/engine/loader.mjs');
     const root = process.cwd();
@@ -73,13 +94,14 @@ try {
     process.stdout.write(`Theme ${active.definition.manifest.id}: manifest, settings and renderer paths are valid.\n`);
   }
   else if (['dev', 'build', 'preview', 'sync'].includes(command)) {
+    if (command !== 'preview') reportThemeConfigs(await syncThemeConfigs(process.cwd()));
     // Resolve Astro from this installed package, including nested npm layouts.
     const require = createRequire(import.meta.url);
     const astroRoot = path.dirname(require.resolve('astro/package.json'));
     const child = spawn(process.execPath, [path.join(astroRoot, 'bin/astro.mjs'), command, ...args], { stdio: 'inherit', shell: false, windowsHide: true });
     process.exitCode = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', (code) => resolve(code ?? 1)); });
   } else {
-    process.stdout.write('mintfolio init | dev | build | preview | sync | theme:check\n');
+    process.stdout.write('mintfolio init | dev | build | preview | sync | theme:add <package> | theme:init [theme] | theme:sync | theme:check\n');
     if (!['help', '--help', '-h'].includes(command)) process.exitCode = 1;
   }
 } catch (error) {

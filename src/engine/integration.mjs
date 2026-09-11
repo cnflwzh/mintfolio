@@ -58,7 +58,7 @@ export default function themeRuntime(selection = {}, engine = {}) {
         const themeName = process.env.MINTFOLIO_THEME || selection.theme;
         const changedSelection = Boolean(process.env.MINTFOLIO_THEME) && themeName !== selection.theme;
         const active = await loadTheme({ root, theme: themeName, settings: changedSelection ? {} : selection.settings, overrides: changedSelection ? {} : selection.overrides, fresh: command === 'dev' });
-        const minimal = active.definition.manifest.id === 'minimal' && !themeName ? active : await loadTheme({ root, theme: 'minimal' });
+        const minimal = active.definition.manifest.id === 'minimal' ? active : await loadTheme({ root, theme: 'minimal', readUserConfig: false });
         const siteConfig = path.resolve(root, engine.siteConfig ?? './site.config.ts');
         if (engine.routes) {
           addWatchFile(siteConfig);
@@ -83,6 +83,7 @@ export default function themeRuntime(selection = {}, engine = {}) {
         const themeModules = new Set(active.overrideEntries);
         const manifestPath = path.join(root, 'theme.config.mjs');
         addWatchFile(manifestPath);
+        addWatchFile(active.themeConfigFile);
         for (const filename of active.manifestDependencies) addWatchFile(filename);
         logger.info(`Theme: ${active.definition.manifest.name} ${active.definition.manifest.version}`);
         if (themeName === 'happyhues' || themeName === 'default') logger.warn('Use the installed package name "@mintfolio/theme-default". Only Minimal is bundled with Core.');

@@ -26,6 +26,12 @@ npm install @mintfolio/theme-default
 export default { theme: '@mintfolio/theme-default' };
 ```
 
+Core >= 0.1.1 可通过 `npx mintfolio theme:add default` 一次完成安装与主题配置生成。它会在站点根目录生成 `theme-default.config.mjs`，其中包含全部可编辑设置和说明；`theme.config.mjs` 继续负责选择主题和页面覆盖。
+
+使用普通 `npm install` 安装主题后，下一次 `mintfolio dev/build/sync` 会补齐主题声明的配置模板。也可运行 `npx mintfolio theme:init default` 立即生成，或 `npx mintfolio theme:sync` 同步已安装主题。`mintfolio init` 会生成 Minimal 的设置文件。重复生成与升级保留已有文件。
+
+只读取当前所选主题的 `theme-<id>.config.mjs`。主题清单默认值、专属配置文件、旧的内联 `theme.config.mjs.settings` 依次覆盖；嵌套对象递归合并、数组整组替换。主题配置文件使用原生 ESM，建议直接导出设置对象，图片使用 public 路径或 URL。
+
 ## 公开入口
 
 | 入口 | 调用方 / 用途 |
