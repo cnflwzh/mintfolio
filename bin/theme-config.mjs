@@ -1,9 +1,9 @@
-import { readFile, writeFile, realpath, stat } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadTheme, isWithin } from '../src/engine/loader.mjs';
 import { resolveSettings } from '../src/engine/schema.mjs';
-import { themeConfigPath } from '../src/engine/theme-config.mjs';
+import { objectText } from './lib/config-source.mjs';
 
 const aliases = { verdant: '@mintfolio/theme-verdant' };
 
@@ -17,7 +17,7 @@ async function packageAt(directory) {
 }
 
 /**
- * Theme packages opt into automatic discovery with mintfolio.configTemplate.
+ * Theme packages may ship a commented settings template with mintfolio.configTemplate.
  * The path is relative to the owning package, checked after resolving symlinks.
  * @param {string} manifestPath Resolved theme.mjs path.
  * @returns {Promise<string|null>} Safe template filename, or generic schema generation.
@@ -59,53 +59,20 @@ function schemaSource(schema, values, depth=1) {
 }
 
 /**
- * Create one editable host config from a theme-owned template or its full schema.
- * Existing files are never changed, including invalid or manually edited files.
+ * Commented settings for one theme, written into theme.config.mjs as `settings`.
+ * A package template is validated against the same manifest that validates host
+ * edits; themes without one get every schema field with its default.
  * @param {string} root Host root with installed dependencies.
  * @param {string} theme Installed package, local theme selector, or Minimal.
- * @returns {Promise<{filename:string,created:boolean}>} The host file and whether it was created.
+ * @returns {Promise<string>} Object literal source starting with `{`.
  */
-export async function createThemeConfig(root, theme) {
-  const active = await loadTheme({root,theme:normalizeThemeName(theme),readUserConfig:false});
-  const filename = themeConfigPath(root, active.definition.manifest.id);
+export async function settingsTemplate(root, theme) {
+  const active = await loadTheme({ root, theme: normalizeThemeName(theme) });
   const template = await templateFor(active.manifestPath);
-  let source;
   if (template) {
-    // Templates are plain ESM settings owned by the installed package. Validate
-    // their defaults with the same manifest that will validate host edits.
     resolveSettings(active.definition, (await import(pathToFileURL(template).href)).default);
-    source = await readFile(template, 'utf8');
-  } else {
-    source = `/** ${active.definition.manifest.name.replace(/\*\//g,'')} 的设置。仅在选择此主题时生效；重复生成不会覆盖本文件。 */\nexport default {\n${schemaSource(active.definition.settings,active.settings)}\n};\n`;
+    return objectText(await readFile(template, 'utf8'), template);
   }
-  try { await writeFile(filename, source, {flag:'wx'}); return {filename,created:true}; }
-  catch (error) { if (error.code === 'EEXIST') return {filename,created:false}; throw error; }
-}
-
-/**
- * Find theme packages declared by this site, not arbitrary transitive packages.
- * Used by init/dev/build and the explicit sync command, independently of npm
- * dependency lifecycle permissions. It never changes the selected layout.
- * @param {string} root Host root.
- * @returns {Promise<Array<{filename:string,created:boolean}>>}
- */
-export async function syncThemeConfigs(root) {
-  try { await stat(path.join(root,'site.config.ts')); }
-  catch (error) { if (error.code === 'ENOENT') return []; throw error; }
-  const pkg = await packageAt(root);
-  if (!pkg) return [];
-  const results = [await createThemeConfig(root,'minimal')];
-  const dependencies = {...pkg.dependencies,...pkg.devDependencies,...pkg.optionalDependencies};
-  for (const name of Object.keys(dependencies)) {
-    const directory = path.resolve(root,'node_modules',name);
-    if (!isWithin(directory,path.join(root,'node_modules'))) continue;
-    const installed = await packageAt(directory);
-    if (installed?.mintfolio?.configTemplate) results.push(await createThemeConfig(root,name));
-  }
-  return results;
-}
-
-/** @param {Array<{filename:string,created:boolean}>} results Report only new files during automatic sync. */
-export function reportThemeConfigs(results) {
-  for (const result of results) if (result.created) process.stdout.write(`Created ${path.basename(result.filename)}\n`);
+  if (!Object.keys(active.definition.settings).length) return '{}';
+  return `{\n${schemaSource(active.definition.settings, active.settings)}\n}`;
 }

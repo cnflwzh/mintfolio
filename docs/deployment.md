@@ -13,28 +13,23 @@ npx mintfolio build
 npx mintfolio preview
 ```
 
-默认输出目录是 `dist/`。`preview` 用来查看这次构建的结果，生产环境由你选择的静态托管服务或 Web 服务器提供文件。保留站点源码和锁文件，上传本次构建的完整产物。
+默认输出目录是 `_mintfolio/dist/`。在 CI 中安装依赖和构建时，把工作目录设为 `_mintfolio`（例如 GitHub Actions 的 `working-directory: _mintfolio`）。`preview` 用来查看这次构建的结果，生产环境由你选择的静态托管服务或 Web 服务器提供文件。保留站点源码和锁文件，上传本次构建的完整产物。
 
 ## 域名根目录与子目录
 
 不设置 Astro `base` 时，默认是 `/`，原有域名根目录部署方式保持兼容。
 
-若网站要发布在 `https://example.com/blog-site/`，在站点的 `astro.config.mjs` 设置标准 Astro `base`，并保留 Mintfolio integration。例如，使用 CLI 初始化生成的主题配置：
+若网站要发布在 `https://example.com/blog-site/`，添加可选的 `_mintfolio/astro.config.mjs`，只写标准 Astro `base`。Core 会把它与自己生成的配置合并，不需要也不应再引入 Mintfolio integration：
 
 ```js
-import { defineConfig } from 'astro/config';
-import mintfolio from '@mintfolio/core';
-import theme from './theme.config.mjs';
-
-export default defineConfig({
+export default {
   base: '/blog-site/',
-  integrations: [mintfolio(theme)],
-});
+};
 ```
 
 当前建议使用 `/blog-site/` 这类 ASCII 部署目录。使用本地 Astro 7.3.2 验证中文 `base` 时，页面可以生成，但正文导入图片的优化阶段出现路径不匹配并导致构建失败；这是本轮实际发现的限制。中文文章 slug、标签和独立页路径在 ASCII `base` 下已验证可用。Core 会统一比较 Unicode 与编码形式的前缀，但这不能代替构建器的图片处理兼容性。
 
-这里的 `theme.config.mjs` 继续选择当前主题。已有其他 Astro 配置时，只合并需要的 `base` 设置，保留原有 integration、Markdown 配置和其他选项。
+主题仍由 `theme.config.mjs` 选择。其他 Astro 选项（例如 Markdown 或远程图片设置）也写在同一个可选文件中。
 
 `site.config.ts` 中的 `site.url` 用来计算公开绝对地址。对于上面的 `base`，可以填写域名 origin，也可以填写一致的完整子目录地址：
 

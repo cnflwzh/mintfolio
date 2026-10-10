@@ -1,6 +1,10 @@
 import { mkdir, readFile, realpath, rename, stat, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { PROJECT_DIR } from '../../src/shared/layout.mjs';
+
+/** Backups live in the project folder (or the article root for articles) and ignore themselves in Git. */
+export const BACKUP_DIR = '.backups';
 
 /** @param {string} filename @returns {Promise<boolean>} Whether a filesystem entry exists. */
 export async function exists(filename) {
@@ -8,13 +12,25 @@ export async function exists(filename) {
   catch (error) { if (error.code === 'ENOENT') return false; throw error; }
 }
 
-/** @param {string} start Working directory, including a site subdirectory. @returns {Promise<string>} Real site root. */
+/** @param {string} directory @returns {Promise<boolean>} Whether directory holds Mintfolio's package and theme selection. */
+async function isProject(directory) {
+  return await exists(path.join(directory, 'package.json')) && await exists(path.join(directory, 'theme.config.mjs'));
+}
+
+/**
+ * Find the site's project folder (_mintfolio) from the article root, an article
+ * subdirectory or anywhere inside the project folder itself.
+ * @param {string} start Working directory.
+ * @returns {Promise<string>} Real _mintfolio path; CLI commands use it as their root.
+ */
 export async function findSite(start) {
   let directory = await realpath(start);
   while (true) {
-    if (await exists(path.join(directory, 'package.json')) && await exists(path.join(directory, 'theme.config.mjs'))) return directory;
+    if (await isProject(path.join(directory, PROJECT_DIR))) return realpath(path.join(directory, PROJECT_DIR));
+    if (path.basename(directory) === PROJECT_DIR && await isProject(directory)) return directory;
+    if (await isProject(directory)) throw new Error(`${directory} 使用旧的站点布局：配置文件需要移到 ${PROJECT_DIR}/ 中，文章放在站点根目录。步骤见 Core 文档 docs/cli.md 的「从旧布局升级」。`);
     const parent = path.dirname(directory);
-    if (parent === directory) throw new Error('当前目录不在 Mintfolio 站点中。请进入站点，或使用 mintfolio create <目录>。');
+    if (parent === directory) throw new Error(`当前目录不在 Mintfolio 站点中（没有找到 ${PROJECT_DIR}/）。请进入站点，或运行 mintfolio init 把当前目录变成站点。`);
     directory = parent;
   }
 }
@@ -44,19 +60,21 @@ export async function checkedPath(root, filename) {
 /**
  * Replace one file only if it still matches the inspected version. Keep an exact
  * backup, then rename a complete sibling file so readers never see partial text.
- * @param {string} root Site root.
+ * @param {string} root Directory that must contain filename.
  * @param {string} filename Existing editable file within root.
  * @param {string} original Expected UTF-8 content.
  * @param {string} source Replacement UTF-8 content.
+ * @param {string} [backupRoot] Folder whose .backups receives the copy; articles pass the project folder.
  * @returns {Promise<string|null>} Backup path, or null when unchanged.
  */
-export async function saveFile(root, filename, original, source) {
+export async function saveFile(root, filename, original, source, backupRoot = root) {
   if (source === original) return null;
   await checkedPath(root, filename);
   if (await readFile(filename, 'utf8') !== original) throw new Error(`文件已被其他程序修改，请重试：${filename}`);
-  const backup = path.join(root, '.mintfolio', 'backups', `${Date.now()}-${randomUUID()}`, path.relative(root, filename));
-  await checkedPath(root, backup);
+  const backup = path.join(backupRoot, BACKUP_DIR, `${Date.now()}-${randomUUID()}`, path.relative(root, filename));
+  await checkedPath(backupRoot, backup);
   await mkdir(path.dirname(backup), { recursive: true });
+  await writeFile(path.join(backupRoot, BACKUP_DIR, '.gitignore'), '# Mintfolio 修改文件前的备份，不需要提交。\n*\n', { flag: 'wx' }).catch(error => { if (error.code !== 'EEXIST') throw error; });
   await writeFile(backup, original, { flag: 'wx' });
   const temporary = path.join(path.dirname(filename), `.${path.basename(filename)}.${randomUUID()}.tmp`);
   try {

@@ -1,6 +1,6 @@
 {
   "name": "@mintfolio/core",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A Markdown blog and personal site toolkit, built with Astro.",
   "type": "module",
   "engines": {
@@ -18,7 +18,8 @@
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "docs/deployment.md",
-    "docs/performance.md"
+    "docs/performance.md",
+    "docs/analytics.md"
   ],
   "exports": {
     ".": {
@@ -55,7 +56,8 @@
   "dependencies": {
     "@astrojs/compiler": "^2.13.1",
     "@babel/parser": "^7.29.8",
-    "@mintfolio/theme-api": "^1.1.0",
+    "@clack/prompts": "^1.8.1",
+    "@mintfolio/theme-api": "^1.2.0",
     "@types/sanitize-html": "^2.16.1",
     "astro": "^7.3.2",
     "es-module-lexer": "^1.7.0",
@@ -64,8 +66,8 @@
     "sanitize-html": "^2.17.7",
     "satteri": "^0.10.5",
     "semver": "^7.8.5",
-    "yaml": "^2.9.0",
-    "ultrahtml": "^1.7.0"
+    "ultrahtml": "^1.7.0",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",

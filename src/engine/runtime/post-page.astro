@@ -32,7 +32,7 @@ const page: PostPageData = {
   previous: posts[index - 1] ?? null,
   next: posts[index + 1] ?? null,
   related: await theme.content.related(post.id),
-  seriesPosts: post.series ? posts.filter(item=>item.series?.id===post.series?.id).toSorted((a,b)=>(a.series?.order??Infinity)-(b.series?.order??Infinity)||Date.parse(a.publishedAt)-Date.parse(b.publishedAt)) : [],
+  seriesPosts: post.series ? await theme.content.series(post.series.id) : [],
 };
 const Renderer = getRenderer('post');
 ---

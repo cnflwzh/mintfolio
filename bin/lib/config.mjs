@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'astro/zod';
 import { activeTheme, readSelection } from './themes.mjs';
-import { createThemeConfig } from '../theme-config.mjs';
+import { normalizeThemeName } from '../theme-config.mjs';
 import { loadTheme } from '../../src/engine/loader.mjs';
 import { resolveSettings } from '../../src/engine/schema.mjs';
 import { configSource, setSourceValue, sourceNode, sourceValue } from './config-source.mjs';
@@ -34,6 +34,7 @@ const siteSchema = z.object({
   projects: z.array(z.object({ title: string, description: string, link: string.optional(), repo: string.optional(), tags: z.array(string), image: string.optional() }).strict()),
   contact: z.object({ email: string.optional(), social: z.array(string).optional() }).strict(),
   icp: string,
+  analytics: z.object({ google: z.object({ measurementId: string.trim().regex(/^G-[A-Z0-9]+$/, '需要 GA4 测量 ID，例如 G-XXXXXXXXXX'), enabled: z.boolean().optional() }).strict().optional() }).strict().optional(),
   blog: z.object({ pageSize: z.number().int().min(1).max(100).optional(), timezone: timezone.optional() }).strict().optional(),
   seo: z.object({ defaultSocialImage: string.optional(), twitterSite: string.optional() }).strict().optional(),
   feed: z.object({ limit: z.number().int().min(1).max(1000).optional(), content: z.enum(['summary', 'full']).optional() }).strict().optional(),
@@ -77,11 +78,17 @@ export async function configFilename(root, scope, selector) {
     return checkedPath(root, path.resolve(root, selection.siteConfig || 'site.config.ts'));
   }
   if (scope === 'theme') {
-    // Opening an editor must still work when the editable settings are invalid.
-    const theme = selector || (await readSelection(root)).theme || 'minimal';
-    return (await loadTheme({ root, theme, readUserConfig: false })).themeConfigFile;
+    // Settings live beside the selection; opening the file must work even when they are invalid.
+    if (selector) await requireActive(root, selector);
+    return checkedPath(root, path.join(root, 'theme.config.mjs'));
   }
   throw new Error('配置范围为 site 或 theme。');
+}
+
+/** @param {string} root @param {string} selector @returns {Promise<void>} Settings are only stored for the selected theme. */
+async function requireActive(root, selector) {
+  const current = normalizeThemeName((await readSelection(root)).theme || 'minimal');
+  if (normalizeThemeName(selector) !== current) throw new Error(`theme.config.mjs 只保存当前主题（${current}）的设置。请先运行 mintfolio theme use ${selector}。`);
 }
 
 /** @param {string} root @param {'site'|'theme'} scope @param {string} [key] Optional dotted field. @param {string} [selector] @returns {Promise<unknown>} Literal site values or effective theme settings. */
@@ -101,8 +108,7 @@ export async function getConfig(root, scope, key, selector) {
 
 /**
  * Validate and edit one site/theme field, with source-preserving backup writes.
- * Existing legacy inline overrides remain authoritative, so edits target that
- * override when it owns the field; otherwise they target the theme-specific file.
+ * Theme fields are written under settings in theme.config.mjs.
  * @param {string} root Site root.
  * @param {'site'|'theme'} scope Which config family to change.
  * @param {string} key Dotted field path.
@@ -120,7 +126,8 @@ export async function setConfig(root, scope, key, raw, options = {}) {
     value = inputValue(raw, candidate => field.parse(candidate), options.json);
     filename = await configFilename(root, scope);
   } else if (scope === 'theme') {
-    const active = await activeTheme(root, options.theme);
+    if (options.theme) await requireActive(root, options.theme);
+    const active = await activeTheme(root);
     const validate = candidate => {
       const settings = structuredClone(active.settings);
       setIn(settings, keys, candidate);
@@ -128,12 +135,8 @@ export async function setConfig(root, scope, key, raw, options = {}) {
       return candidate;
     };
     value = inputValue(raw, validate, options.json);
-    if (active.same && getIn(active.selection.settings, keys) !== undefined) {
-      filename = path.join(root, 'theme.config.mjs');
-      sourceKey = `settings.${key}`;
-    } else {
-      filename = (await createThemeConfig(root, active.selector)).filename;
-    }
+    filename = path.join(root, 'theme.config.mjs');
+    sourceKey = `settings.${key}`;
   } else throw new Error('配置范围为 site 或 theme。');
   await checkedPath(root, filename);
   const original = await readFile(filename, 'utf8');
@@ -151,7 +154,7 @@ export async function setConfig(root, scope, key, raw, options = {}) {
 export async function configSchema(root, scope, selector) {
   if (scope === 'theme') {
     const theme = selector || (await readSelection(root)).theme || 'minimal';
-    return (await loadTheme({ root, theme, readUserConfig: false })).definition.settings;
+    return (await loadTheme({ root, theme: normalizeThemeName(theme) })).definition.settings;
   }
   if (scope !== 'site') throw new Error('配置范围为 site 或 theme。');
   return {
@@ -162,6 +165,7 @@ export async function configSchema(root, scope, selector) {
     projects: 'JSON 数组：{ title, description, tags, link?, repo?, image? }',
     contact: { email: '字符串', social: '平台名字符串数组' },
     icp: '字符串',
+    analytics: { google: { measurementId: 'GA4 测量 ID，例如 G-XXXXXXXXXX', enabled: '布尔值，默认 true；仅生产构建启用' } },
     blog: { pageSize: '1–100 的整数，默认 10', timezone: 'IANA 时区，默认 UTC，例如 Asia/Hong_Kong' },
     seo: { defaultSocialImage: '默认分享图片地址', twitterSite: 'Twitter/X 账号，例如 @example' },
     feed: { limit: '1–1000 的整数，默认 50', content: 'summary 或 full' },

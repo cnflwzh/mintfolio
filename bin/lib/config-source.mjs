@@ -104,10 +104,47 @@ function indentation(source, index) {
  * @returns {string} Updated source, still with the original surrounding formatting.
  */
 export function setSourceValue(source, key, value, filename) {
+  const eol = source.includes('\r\n') ? '\r\n' : '\n';
+  return editSource(source, key, value, (input, indent) => JSON.stringify(input, null, 2).replace(/\n/g, eol + indent), filename);
+}
+
+/**
+ * Like setSourceValue, but writes literal source text such as a commented
+ * object template, re-indented to the field's position.
+ * @param {string} source Original ESM/TS content.
+ * @param {string} key Dotted field path; missing parents are not created.
+ * @param {string} text Valid JavaScript expression source.
+ * @param {string} [filename] Diagnostic filename.
+ * @returns {string} Updated, re-parsed source.
+ */
+export function setSourceText(source, key, text, filename) {
+  const eol = source.includes('\r\n') ? '\r\n' : '\n';
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const render = (input, indent) => {
+    if (input !== text) throw new Error('只能写入父对象已存在的字段。');
+    return lines.map((line, index) => index && line ? indent + line : line).join(eol);
+  };
+  const result = editSource(source, key, text, render, filename);
+  configSource(result, filename);
+  return result;
+}
+
+/**
+ * Source text of a config file's exported object, including comments inside it.
+ * @param {string} source ESM config whose default export is an object literal.
+ * @param {string} [filename] Diagnostic filename.
+ * @returns {string} Object literal text, from the opening to the closing brace.
+ */
+export function objectText(source, filename) {
+  const { root } = configSource(source, filename);
+  return source.slice(root.start, root.end);
+}
+
+/** Shared range edit; format renders the replacement at the given indentation. */
+function editSource(source, key, value, format, filename) {
   const document = configSource(source, filename);
   const keys = keyPath(key);
   const eol = source.includes('\r\n') ? '\r\n' : '\n';
-  const format = (input, indent) => JSON.stringify(input, null, 2).replace(/\n/g, eol + indent);
   let container = document.root;
   for (let index = 0; index < keys.length; index++) {
     container = unwrap(container);

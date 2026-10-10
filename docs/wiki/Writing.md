@@ -1,6 +1,6 @@
 # Markdown 写作
 
-默认文章位于 `content/blog/**/*.md`。每篇文章由 YAML frontmatter 和 Markdown 正文组成。
+文章就是站点根目录（及其子目录）中的 `*.md` 文件。每篇文章由 YAML frontmatter 和 Markdown 正文组成。
 
 ```md
 ---

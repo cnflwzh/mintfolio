@@ -54,13 +54,13 @@ export function createPostListController<T>(options: PostListOptions<T>): PostLi
   let disposed = false;
   const listeners = new Set<(state: PostListState<T>) => void>();
   const facets = (): PostListState<T>['facets'] => ({
-    tags: [...new Set(searchPosts(indexed, { category: filters.category }).flatMap((entry) => entry.tags))],
-    categories: [...new Set(searchPosts(indexed, { tag: filters.tag }).map((entry) => entry.category))],
+    tags: [...new Set(searchPosts(indexed, { category: filters.category, series: filters.series }).flatMap((entry) => entry.tags))],
+    categories: [...new Set(searchPosts(indexed, { tag: filters.tag, series: filters.series }).map((entry) => entry.category))],
   });
   const reconcile = (): void => {
     if (!options.reconcileFacets) return;
-    if (filters.tag && !facets().tags.includes(filters.tag.toLowerCase())) filters.tag = '';
-    if (filters.category && !facets().categories.includes(filters.category.toLowerCase())) filters.category = '';
+    if (filters.tag && !facets().tags.some(label => label.toLowerCase() === filters.tag.toLowerCase())) filters.tag = '';
+    if (filters.category && !facets().categories.some(label => label.toLowerCase() === filters.category.toLowerCase())) filters.category = '';
   };
   reconcile();
   const value = (): PostListState<T> => {
@@ -74,7 +74,7 @@ export function createPostListController<T>(options: PostListOptions<T>): PostLi
       if (disposed) return;
       const changed = { ...filters, ...next };
       if (Object.values(changed).some((item) => typeof item !== 'string')) throw new Error('Filters must be strings');
-      if (changed.q !== filters.q || changed.tag !== filters.tag || changed.category !== filters.category) limit = pageSize;
+      if (changed.q !== filters.q || changed.tag !== filters.tag || changed.category !== filters.category || (changed.series ?? '') !== (filters.series ?? '')) limit = pageSize;
       filters = changed;
       reconcile();
       emit();

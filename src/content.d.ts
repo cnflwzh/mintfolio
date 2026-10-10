@@ -9,7 +9,10 @@ export interface BlogFrontmatter extends PageFrontmatter {
   pubDate:Date; category?:string; tags?:string[]; cover?:string; password?:string;
   pinned:boolean; series?:string; seriesOrder?:number; authors?:string[];
 }
-/** Markdown location is relative to the consuming site's project root. */
-export function createBlogCollection(options?:{base?:string}):{loader:Loader;schema:z.ZodType<BlogFrontmatter>};
-/** Register under collections.pages for independent static content pages. */
+/**
+ * base is relative to the Astro project root (the site's _mintfolio folder).
+ * Defaults read every article under the site root, skipping `_`/`.` paths and repository documents.
+ */
+export function createBlogCollection(options?:{base?:string;pattern?:string|string[]}):{loader:Loader;schema:z.ZodType<BlogFrontmatter>};
+/** Independent static content pages, by default from _mintfolio/pages. */
 export function createPageCollection(options?:{base?:string}):{loader:Loader;schema:z.ZodType<PageFrontmatter>};

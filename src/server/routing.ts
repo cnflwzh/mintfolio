@@ -26,17 +26,21 @@ export function createUrls(deployment = '/'): ThemeUrls {
   home: () => route('/'),
   archive: (filters: Partial<PostFilters> = {}) => {
     const params = new URLSearchParams();
-    for (const key of ['q','tag','category'] as const) {
+    for (const key of ['q','tag','category','series'] as const) {
       const value=filters[key]?.trim(); if(value) params.set(key,value);
     }
     return route(params.size ? '/blog?'+params : '/blog');
   },
   archivePage: (page: number, filters: Partial<PostFilters> = {}) => {
     if(!Number.isSafeInteger(page)||page<1) throw new Error('Archive page must be a positive integer');
-    const base=filters.tag ? urls.tag(filters.tag) : filters.category ? urls.category(filters.category) : route('/blog');
+    const selected = (['tag', 'category', 'series'] as const).find(key => filters[key]?.trim());
+    const base=selected ? urls[selected](filters[selected]!.trim()) : route('/blog');
     const params=new URLSearchParams();
     if(filters.q?.trim()) params.set('q',filters.q.trim());
-    if(filters.tag && filters.category?.trim()) params.set('category',filters.category.trim());
+    for (const key of ['tag', 'category', 'series'] as const) {
+      const value=filters[key]?.trim();
+      if(key!==selected && value) params.set(key,value);
+    }
     const url=page===1?base:base+'/page/'+page;
     return params.size?url+'?'+params:url;
   },
@@ -47,6 +51,8 @@ export function createUrls(deployment = '/'): ThemeUrls {
   series: (label: string) => route('/series/'+taxonomySegment(label)),
   rss: () => route('/rss.xml'), sitemap: () => route('/sitemap.xml'),
   jsonFeed: () => route('/feed.json'), atom: () => route('/atom.xml'),
+  searchIndex: () => route('/search-index.json'), robots: () => route('/robots.txt'),
+  asset: (value: string) => withBase(value, deployment),
  };
  return urls;
 }

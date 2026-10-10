@@ -27,7 +27,7 @@ const formatDate = (value: string): string => new Intl.DateTimeFormat(language, 
 <section class="mintfolio-archive" data-core-static-archive>
   <SearchPanel endpoint={searchEndpoint} />
   <nav class="mintfolio-taxonomy" aria-label="文章分类和标签">
-    <a class="mintfolio-all-posts" href={archiveUrl} aria-current={!filters.tag && !filters.category ? 'page' : undefined}>全部文章</a>
+    <a class="mintfolio-all-posts" href={archiveUrl} aria-current={!filters.tag && !filters.category && !filters.series ? 'page' : undefined}>全部文章</a>
     {categories.length > 0 && <div class="mintfolio-taxonomy-group">
       <span class="mintfolio-taxonomy-label">分类</span>
       {categories.map((term) => <a href={term.url} aria-current={filters.category === term.label ? 'page' : undefined}>{term.label} <span>({term.count})</span></a>)}

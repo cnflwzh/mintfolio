@@ -2,6 +2,7 @@ import { defineCollection } from 'astro:content';
 import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
 import { slug as githubSlug } from 'github-slugger';
+import { ARTICLE_PATTERNS, PAGES_DIR } from './shared/layout.mjs';
 
 // The file identity stays stable when its public permalink changes.
 const generateId = ({entry}) => entry.replace(/\.md$/i,'').split('/').map(segment => githubSlug(segment)).join('/').replace(/\/index$/,'');
@@ -14,9 +15,12 @@ const httpUrl = z.string().url().refine(value => /^https?:\/\//i.test(value), '�
 const seo = z.object({title:z.string().optional(),description:z.string().optional(),image:z.string().optional(),imageAlt:z.string().optional(),canonical:httpUrl.optional(),noindex:z.boolean().optional()}).optional();
 const shared = { title:z.string().trim().min(1), description:z.string().default(''), slug:slug.optional(), aliases:z.array(alias).default([]), draft:z.boolean().default(false), updatedAt:z.coerce.date().optional(), seo };
 
-/** Build the blog collection from Markdown under base, relative to the site root. */
-export function createBlogCollection({base='./content/blog'}={}) {
-  return defineCollection({loader:glob({pattern:'**/*.md',base,generateId}),schema:z.object({
+/**
+ * Build the blog collection. base is relative to the Astro project root (the
+ * site's _mintfolio folder), so the default reads articles from the site root.
+ */
+export function createBlogCollection({base='..',pattern=ARTICLE_PATTERNS}={}) {
+  return defineCollection({loader:glob({pattern,base,generateId}),schema:z.object({
     ...shared, pubDate:z.coerce.date(), category:z.string().trim().optional(), tags:z.array(z.string().trim().min(1)).optional(),
     cover:z.string().optional(), password:z.string().refine(value=>value.trim().length>0,'文章密码不能为空').optional(),
     pinned:z.boolean().default(false), series:z.string().trim().min(1).optional(), seriesOrder:z.number().int().nonnegative().optional(),
@@ -24,7 +28,7 @@ export function createBlogCollection({base='./content/blog'}={}) {
   })});
 }
 
-/** Optional independent Markdown pages. Register as collections.pages to enable. */
-export function createPageCollection({base='./content/pages'}={}) {
+/** Independent Markdown pages, by default from _mintfolio/pages. */
+export function createPageCollection({base=`./${PAGES_DIR}`}={}) {
   return defineCollection({loader:glob({pattern:'**/*.md',base,generateId}),schema:z.object({...shared,password:z.never().optional()})});
 }

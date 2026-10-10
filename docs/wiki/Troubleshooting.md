@@ -14,7 +14,7 @@ mintfolio theme check
 
 ## 新文章没有出现在列表里
 
-检查文章是否仍为 `draft: true`，以及文件是否位于 `content/blog`。执行 `mintfolio post publish <id>` 后重新构建。自定义内容集合目录需要直接管理其中的文章。
+检查文章是否仍为 `draft: true`，以及文件是否位于站点根目录或其子目录中；以 `_` 或 `.` 开头的目录、`_mintfolio/` 和 README 等仓库说明文件不会发布。执行 `mintfolio post publish <id>` 后重新构建。
 
 ## 配置校验失败
 

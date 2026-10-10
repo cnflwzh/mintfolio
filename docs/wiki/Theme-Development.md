@@ -14,7 +14,7 @@ npm ci
 
 模板包含 `theme.mjs`、首页、文章、归档与普通页面，以及布局、样式、类型检查和 CI。未实现的 404 页面由 Core 的 Minimal 补齐。
 
-修改 `package.json` 的包名、作者、仓库地址与版本，以及 `theme.mjs` 的 ID、显示名、作者、描述。主题 ID 使用稳定的小写连字符名称，它决定用户配置文件名。
+修改 `package.json` 的包名、作者、仓库地址与版本，以及 `theme.mjs` 的 ID、显示名、作者、描述。主题 ID 使用稳定的小写连字符名称，用于标识主题；站点设置统一保存在 `_mintfolio/theme.config.mjs`。
 
 ## 2. 声明页面和设置
 
@@ -28,7 +28,7 @@ export default defineTheme({
     version: '1.0.0',
     author: 'Your name',
     description: '简洁的阅读主题',
-    engine: '^1.1.0',
+    engine: '^1.2.0',
   },
   capabilities: { encryptedPosts: true },
   pages: {
@@ -111,7 +111,7 @@ export default {
 };
 ```
 
-然后在 `package.json` 声明 `"mintfolio": { "configTemplate": "./config/theme-paper.config.mjs" }`，并把 `config` 放入 `files` 白名单。Core 负责为消费站点生成文件，并保留用户已有设置。
+然后在 `package.json` 声明 `"mintfolio": { "configTemplate": "./config/theme-paper.config.mjs" }`，并把 `config` 放入 `files` 白名单。站点切换到你的主题时，Core 会把这个对象（包括其中的注释）写入站点 `theme.config.mjs` 的 `settings`。
 
 ## 6. 验证真正的 npm 包
 
@@ -137,3 +137,5 @@ npx mintfolio preview
 发布前确认 `files` 包含 renderer、布局、样式、字体及配置模板；用 `npm pack --dry-run` 查看清单。保留 Core 与 Astro 的 peerDependencies，声明实际使用的依赖，并为字体等资源保留许可证。
 
 请先将 Starter 的包名、作者和仓库地址改为自己的信息；如果开发期间设置了 `private: true`，发布时移除它，再执行 `npm publish --access public`。这一步会实际公开 npm 包，请使用自己的包名和 npm 账号。GPL-3.0-only 许可要求及完整条款见仓库 LICENSE。
+
+SDK 1.2 的系列查询、搜索端点、子目录资源 URL 和 `ThemePageProps` 推导示例见 [Theme API](Theme-API#sdk-12-与-core-04)。
