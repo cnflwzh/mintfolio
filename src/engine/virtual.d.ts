@@ -10,3 +10,5 @@ declare module 'virtual:mintfolio/site-config' {
   const config: import('../public/config').SiteConfigInput;
   export default config;
 }
+
+declare module 'virtual:mintfolio/runtime' { export const previewDrafts: boolean; export const publishedBefore: string; }

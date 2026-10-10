@@ -1,48 +1,63 @@
 ---
 import type { PostFilters, PostSummary, TaxonomyCount } from '@mintfolio/theme-api';
+import type { Pagination as PaginationData } from '@mintfolio/theme-api/astro';
+import SearchPanel from './SearchPanel.astro';
+import Pagination from './Pagination.astro';
+
 interface Props {
-  /** Safe public metadata supplied by Core's page/context APIs. */
+  /** Safe summaries for this static page; Core has already filtered and paginated them. */
   posts: PostSummary[];
   tags: TaxonomyCount[];
   categories: TaxonomyCount[];
+  /** Retained for active taxonomy link styling; full-text search reads q from the URL. */
   filters?: Partial<PostFilters>;
   language?: string;
-  /** Omit to display every match; supply a positive integer to enable load more. */
+  /** @deprecated Static page sizes are set in Core config; accepted for source compatibility. */
   pageSize?: number;
+  /** Core's crawlable pagination links; omit when the caller supplies an unpaginated list. */
+  pagination?: PaginationData;
+  /** Optional Core-owned root archive URL, useful for restoring the full article list. */
+  archiveUrl?: string;
+  /** Same-origin global index endpoint, loaded only when search is used. */
+  searchEndpoint?: string;
 }
-const { posts, tags, categories, filters = {}, language = 'zh-CN', pageSize } = Astro.props;
+const { posts, tags, categories, filters = {}, language = 'zh-CN', pagination, archiveUrl = '/blog', searchEndpoint } = Astro.props;
 const formatDate = (value: string): string => new Intl.DateTimeFormat(language, { dateStyle: 'medium' }).format(new Date(value));
 ---
-<section class="mintfolio-archive" data-core-archive data-archive data-posts={JSON.stringify(posts)} data-page-size={pageSize}>
-  <form class="mintfolio-filters" data-filter-form aria-label="筛选文章">
-    <label>搜索<input name="q" type="search" value={filters.q ?? ''} autocomplete="off" /></label>
-    <label>标签<select name="tag"><option value="">全部标签</option>{tags.map((tag) => <option value={tag.label} selected={filters.tag === tag.label}>{tag.label} ({tag.count})</option>)}</select></label>
-    <label>分类<select name="category"><option value="">全部分类</option>{categories.map((term) => <option value={term.label} selected={filters.category === term.label}>{term.label} ({term.count})</option>)}</select></label>
-  </form>
-  <p data-filter-status aria-live="polite"></p>
-  <ol class="mintfolio-posts">
+<section class="mintfolio-archive" data-core-static-archive>
+  <SearchPanel endpoint={searchEndpoint} />
+  <nav class="mintfolio-taxonomy" aria-label="文章分类和标签">
+    <a class="mintfolio-all-posts" href={archiveUrl} aria-current={!filters.tag && !filters.category ? 'page' : undefined}>全部文章</a>
+    {categories.length > 0 && <div class="mintfolio-taxonomy-group">
+      <span class="mintfolio-taxonomy-label">分类</span>
+      {categories.map((term) => <a href={term.url} aria-current={filters.category === term.label ? 'page' : undefined}>{term.label} <span>({term.count})</span></a>)}
+    </div>}
+    {tags.length > 0 && <div class="mintfolio-taxonomy-group">
+      <span class="mintfolio-taxonomy-label">标签</span>
+      {tags.map((term) => <a href={term.url} aria-current={filters.tag === term.label ? 'page' : undefined}>#{term.label} <span>({term.count})</span></a>)}
+    </div>}
+  </nav>
+  {posts.length > 0 ? <ol class="mintfolio-posts">
     {posts.map((post) => <li data-post-id={post.id}>
       <h2><a href={post.url}>{post.title}</a></h2>
       <p><time datetime={post.publishedAt}>{formatDate(post.publishedAt)}</time>{post.protected ? ' · 受保护' : ''}</p>
       <p>{post.description}</p>
       <div class="mintfolio-terms"><a href={post.category.url}>{post.category.label}</a>{post.tags.map((tag) => <a href={tag.url}>#{tag.label}</a>)}</div>
     </li>)}
-  </ol>
-  <button type="button" data-load-more hidden>加载更多</button>
+  </ol> : <p class="mintfolio-empty">这里还没有文章。</p>}
+  {pagination && <Pagination pagination={pagination} />}
 </section>
 <style>
-  .mintfolio-filters { display: grid; gap: .8rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .mintfolio-filters label { display: grid; gap: .25rem; }
-  .mintfolio-filters :is(input,select) { min-width: 0; font: inherit; padding: .45rem; }
+  .mintfolio-taxonomy { display: grid; gap: .8rem; margin-block: 1.5rem; }
+  .mintfolio-all-posts { justify-self: start; }
+  .mintfolio-taxonomy-group { display: flex; align-items: baseline; flex-wrap: wrap; gap: .35rem .8rem; }
+  .mintfolio-taxonomy-label { font-weight: 650; margin-inline-end: .2rem; }
+  .mintfolio-taxonomy a[aria-current="page"] { font-weight: 750; text-decoration-thickness: 2px; }
+  .mintfolio-taxonomy-group a span { font-size: .85em; opacity: .75; }
   .mintfolio-posts { list-style: none; margin: 0; padding: 0; }
   .mintfolio-posts > li { padding: 1rem 0; border-top: 1px solid #8886; }
   .mintfolio-posts h2 { font-size: 1.15rem; margin: 0; }
   .mintfolio-posts p { margin: .4rem 0; }
   .mintfolio-terms { display: flex; flex-wrap: wrap; gap: .75rem; }
-  .mintfolio-archive [hidden] { display: none; }
-  @media (max-width: 620px) { .mintfolio-filters { grid-template-columns: 1fr; } }
+  .mintfolio-empty { padding-block: 1rem; }
 </style>
-<script>
-  import { bindPostArchive, onPage } from '@mintfolio/core/client';
-  onPage('[data-core-archive]', (root, scope) => bindPostArchive(root, scope));
-</script>

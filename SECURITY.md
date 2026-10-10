@@ -1,6 +1,6 @@
 # 安全问题
 
-请通过 [Report a vulnerability](https://github.com/cnflwzh/mintfolio/security/advisories/new) 私下报告可能泄露内容、绕过文章保护或执行非预期代码的问题。不要在公开 issue 中附上真实密码、令牌或私有文章。
+请通过 [Report a vulnerability](https://github.com/MintfolioBlog/mintfolio/security/advisories/new) 私下报告可能泄露内容、绕过文章保护或执行非预期代码的问题。不要在公开 issue 中附上真实密码、令牌或私有文章。
 
 请注明包版本、Node.js 版本、最小复现步骤和影响范围。维护者会在确认后讨论修复与披露时间，目前没有固定的响应时限承诺。
 

@@ -1,0 +1,22 @@
+---
+import { render } from 'astro:content';
+import type { StaticPageData } from '@mintfolio/theme-api/astro';
+import { activeTheme, getRenderer } from 'virtual:mintfolio/theme';
+import { createThemeContext } from '../context';
+import { archivePage } from '../../server/pages';
+import { summarizePage } from '../../server/pagesContent';
+import { pageSeo } from '../../server/seo';
+import { absoluteUrl } from '../../server/routing';
+import type { ExtraRoute } from '../../server/extraRoutes';
+import StaticPage from './static-page.astro';
+interface Props { route:ExtraRoute }
+const {route}=Astro.props;
+const theme=await createThemeContext(activeTheme);
+const archive=route.kind==='archive'?await archivePage(theme,{number:route.number,kind:route.taxonomy,label:route.label}):null;
+const rendered=route.kind==='page'?await render(route.entry):null;
+const Content=rendered?.Content;
+const Renderer=getRenderer('archive');
+---
+{route.kind==='redirect' ? <html lang={theme.site.language}><head><meta charset="utf-8"/><meta name="robots" content="noindex,follow"/><meta http-equiv="refresh" content={'0;url='+route.target}/><link rel="canonical" href={absoluteUrl(route.target,theme.site.url)}/><title>页面已迁移</title></head><body><p>页面已迁移到 <a href={route.target}>新地址</a>。</p></body></html>
+: archive ? <Renderer theme={theme} page={archive}/>
+: route.kind==='page' && Content && <StaticPage entry={route.entry} headings={rendered!.headings}><Content/></StaticPage>}

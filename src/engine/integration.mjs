@@ -9,6 +9,8 @@ import { readModuleImports, assertPublicThemeSpecifier, assertPublicThemeFile } 
 
 const VIRTUAL_ID = 'virtual:mintfolio/theme';
 const RESOLVED_ID = `\0${VIRTUAL_ID}`;
+const RUNTIME_ID = 'virtual:mintfolio/runtime';
+const RESOLVED_RUNTIME_ID = '\0'+RUNTIME_ID;
 const SITE_ID = 'virtual:mintfolio/site-config';
 const RESOLVED_SITE_ID = `\0${SITE_ID}`;
 
@@ -55,17 +57,21 @@ export default function themeRuntime(selection = {}, engine = {}) {
     hooks: {
       'astro:config:setup': async ({ config, updateConfig, addWatchFile, injectRoute, command, logger }) => {
         const root = fileURLToPath(config.root);
+        const publishedBefore = new Date().toISOString();
         const themeName = process.env.MINTFOLIO_THEME || selection.theme;
         const changedSelection = Boolean(process.env.MINTFOLIO_THEME) && themeName !== selection.theme;
         const active = await loadTheme({ root, theme: themeName, settings: changedSelection ? {} : selection.settings, overrides: changedSelection ? {} : selection.overrides, fresh: command === 'dev' });
         const minimal = active.definition.manifest.id === 'minimal' ? active : await loadTheme({ root, theme: 'minimal', readUserConfig: false });
         const siteConfig = path.resolve(root, engine.siteConfig ?? './site.config.ts');
         if (engine.routes) {
+          updateConfig({prerenderConflictBehavior:'error'});
           addWatchFile(siteConfig);
           for (const [pattern, source] of [
             ['/', 'index.astro'], ['/about', 'about.astro'], ['/blog', 'blog/index.astro'],
             ['/blog/[...slug]', 'blog/[...slug].astro'], ['/404', '404.astro'],
             ['/rss.xml', 'rss.xml.ts'], ['/sitemap.xml', 'sitemap.xml.ts'],
+            ['/feed.json','feed.json.ts'], ['/atom.xml','atom.xml.ts'], ['/robots.txt','robots.txt.ts'],
+            ['/search-index.json','search-index.json.ts'], ['/[...path]','extra.astro'],
           ]) injectRoute({ pattern, entrypoint: new URL(`../routes/${source}`, import.meta.url) });
         }
         // Themes declare supported toolchains, not arbitrary engine hooks. The
@@ -114,6 +120,7 @@ export default function themeRuntime(selection = {}, engine = {}) {
             const importerFile = importer ? filenameFromId(importer) : '';
             const isTheme = Boolean(importer) && (isWithin(importerFile, active.themeRoot) || themeModules.has(importerFile));
             if (isTheme) assertPublicThemeSpecifier(source, importerFile);
+            if (source === RUNTIME_ID) return RESOLVED_RUNTIME_ID;
             if (source === VIRTUAL_ID) return RESOLVED_ID;
             if (source === SITE_ID) return RESOLVED_SITE_ID;
             if (!isTheme) return null;
@@ -129,6 +136,7 @@ export default function themeRuntime(selection = {}, engine = {}) {
             return resolved;
           },
           load(id) {
+            if(id===RESOLVED_RUNTIME_ID) return 'export const previewDrafts = '+JSON.stringify(command==='dev' && process.env.MINTFOLIO_PREVIEW_DRAFTS==='1')+'; export const publishedBefore = '+JSON.stringify(publishedBefore)+';';
             if (id === RESOLVED_SITE_ID) return `export { default } from ${JSON.stringify(siteConfig.replaceAll('\\', '/'))};`;
             if (id !== RESOLVED_ID) return null;
             // Explicit imports preserve Astro compilation and include only the

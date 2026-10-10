@@ -23,17 +23,23 @@ mintfolio create my-blog
 mintfolio create my-blog --theme verdant
 cd my-blog
 mintfolio dev
+mintfolio dev --drafts
 mintfolio build
 mintfolio preview
 mintfolio check
+mintfolio check --json
 mintfolio doctor --json
 ```
 
-`create` 需要空目录，会安装 Core、生成网站配置与示例文章，可同时安装并启用主题。
+`create` 需要空目录，会安装 Core、生成网站配置、示例文章和 `/links` 独立页面，可同时安装并启用主题。新站点同时注册 `blog` 与 `pages` 内容集合。
 
 已有目录按传统流程安装 Core 后，执行 `mintfolio init` 补齐文件。初始化不会覆盖已有配置、文章或同名 npm scripts。若安装中断，可在新目录内继续 `npm install` 和 `mintfolio init`。
 
-`dev/build/preview/sync` 的附加参数传给 Astro，例如 `mintfolio dev --port 4322`。`check` 运行站点/主题检查和 Astro sync；生产构建仍使用 `build`，它们不代替编辑器或项目自己的 TypeScript 检查。CLI 不自动部署站点。
+`dev/build/preview/sync` 的附加参数传给 Astro，例如 `mintfolio dev --port 4322`。`dev --drafts` 是 Core 的专用选项，只在此次开发服务中显示草稿和未来文章；其余参数继续传给 Astro。`build`、`preview` 和 `sync` 不接受 `--drafts`，并清除继承的草稿预览环境变量。`preview` 只查看已有生产文件。CLI 不自动部署站点。
+
+`check` 先检查站点/主题和执行 Astro sync，再检查默认 `content/blog`、`content/pages` 中的 Markdown 源。缺失文章链接、图片和重复地址是错误，返回非零退出状态；可能受主题插件影响的锚点、Markdown 源文件链接、已有页面目录内的未知地址是警告。日志包含 `文件:行:列 CODE 说明`，不输出文章正文或密码。检查包含草稿、未来文章和密码文章，忽略外链、代码示例及无法确认的主题路由。自定义 loader/base、网络资源及最终渲染结果需另行验证；生产构建仍使用 `build`。
+
+`check --json` 的 stdout 只输出一个 `{ status, environment, sync, content }` JSON 对象；`content` 包含 `errors`、`warnings` 和 `counts`，Astro sync 日志写入 stderr。即使 sync 失败，仍尽量返回内容诊断。该命令不替代编辑器或项目自己的 TypeScript 检查。
 
 ## 文章
 
@@ -43,15 +49,42 @@ mintfolio post new "一次旅行" --slug life/travel --description "沿途见闻
 mintfolio post new "准备发布的文章" --slug ready --date 2026-09-11 --publish
 mintfolio post list
 mintfolio post list --draft --json
+mintfolio post list --scheduled
+mintfolio post list --publishable
+mintfolio post list --published --json # --publishable 的兼容别名
 mintfolio post publish first-post
 mintfolio post draft first-post
 ```
 
 新文章位于 `content/blog`，默认 `draft: true`。省略 `--slug` 时按标题生成名称，保留中文；显式 ID 可以包含目录，例如 `life/travel`。同名文件不会被覆盖。`--date` 使用本地当天日期作为默认值。
 
-`publish` 只把草稿字段设为 false，使文章可进入下一次构建；它不会执行部署。`draft` 将文章移回草稿状态。修改保留其他 frontmatter 字段、注释及 Markdown 正文，并备份原文件。`list` 只显示 ID、标题、日期和草稿状态，不输出密码或正文。
+`publish` 只把草稿字段设为 false，不执行构建或部署。已经到达 `pubDate` 时提示“可参与下一次构建”；日期仍在未来时提示“发布日期尚未到达”，并显示完整 UTC 时间。`draft` 将文章移回草稿状态。修改保留其他 frontmatter 字段、注释及 Markdown 正文，并备份原文件。
+
+`list` 与生产构建使用同一套发布条件，并在一次操作开始时固定检查时间：`draft: true` 是草稿；非草稿且 `pubDate` 晚于检查时间的是定时文章；非草稿且日期小于或等于检查时间的是可参与构建的文章。这些状态不表示网站上已经部署了该文章。`--draft`、`--scheduled`、`--publishable` 分别筛选三种状态；`--published` 保留为 `--publishable` 的兼容别名，也会排除未到期文章。不同状态的筛选参数不能同时使用。
+
+文本列表显示完整 UTC 发布时间。`list --json` 保留原有 `slug`、`title`、`date`、`draft` 字段，增加 `status`（`draft`、`scheduled`、`publishable`）与 ISO UTC 格式的 `publishedAt`；不输出密码或正文。
 
 CLI 的文章命令采用默认 `content/blog` 目录。自行更换内容集合 loader/base 的站点，应直接管理其自定义目录中的文章。
+
+未来发布日期不会在静态站点上自动触发发布。需要在到期后重新执行构建和部署，也可以由自己的 CI 安排定时构建；Core 不启动后台定时任务。精确到小时的发布日期建议在 frontmatter 使用带时区偏移的 ISO 日期，例如 `pubDate: 2026-10-01T09:00:00+08:00`。`--date YYYY-MM-DD` 适合按日期写作；仅日期的值按 UTC 午夜解析。
+
+常用可选 frontmatter 字段包括 `updatedAt`、`slug`、`aliases`、`pinned`、`series`、`seriesOrder`、`authors` 和 `seo`。`slug` 提供独立于文件名的文章地址，例如 `notes/hello` 对应 `/blog/notes/hello`；`aliases` 是旧站内根路径数组，例如 `["/old-post"]`。CLI 的 `post new --slug` 仍决定文件位置，文章管理命令接收文件 ID；需要固定永久链接时在 frontmatter 单独填写 `slug`。
+
+## 独立页面
+
+将 Markdown 放入 `content/pages`，例如 `content/pages/links.md` 对应 `/links`。页面至少填写 `title`，可使用 `description`、`slug`、`aliases`、`draft`、`updatedAt` 和 `seo`；无需文章的 `pubDate`。Core 保留的首页、文章归档、关于页、订阅源等地址不能被覆盖。
+
+新站点已经注册页面集合；已有站点的初始化会保留现有 `src/content.config.ts`，请手动补上：
+
+```ts
+import { createBlogCollection, createPageCollection } from '@mintfolio/core/content';
+export const collections = {
+  blog: createBlogCollection(),
+  pages: createPageCollection(),
+};
+```
+
+页面入口由站点 `navigation` 配置控制。配置数组会替换默认导航，因此设置时同时保留需要的首页、归档和关于入口。
 
 ## 主题
 
@@ -83,6 +116,11 @@ mintfolio config get site
 mintfolio config get site site.title
 mintfolio config set site site.title "新的博客名称"
 mintfolio config set site profile.bio "记录与分享"
+mintfolio config set site blog.pageSize 12
+mintfolio config set site blog.timezone Asia/Hong_Kong
+mintfolio config set site feed.content full
+mintfolio config set site feed.limit 30
+mintfolio config set site seo.defaultSocialImage /images/share.png
 mintfolio config get theme
 mintfolio config set theme initialPalette 3
 mintfolio config set theme homePageSize 9
@@ -100,8 +138,12 @@ mintfolio config edit theme
 
 ```sh
 mintfolio config set site contact.social '["github","email"]'
+mintfolio config set site authors '[{"id":"writer","name":"作者","url":"https://example.com"}]'
+mintfolio config set site navigation '[{"id":"home","label":"首页","url":"/"},{"id":"blog","label":"文章","url":"/blog"},{"id":"links","label":"友链","url":"/links"}]'
 mintfolio config set theme sidebar.tools '[{"name":"示例工具","description":"工具说明","url":"https://example.com"}]'
 ```
+
+`blog.pageSize` 接受 1–100 的整数，`blog.timezone` 接受有效的 IANA 时区。`feed.limit` 接受 1–1000，`feed.content` 为 `summary` 或 `full`。作者需要唯一 `id` 和非空 `name`；文章 `authors` 填写对应 ID。导航项需要 `id`、`label` 和站内根路径或 HTTP(S) URL。`config schema site` 可查看完整字段。
 
 默认按照字段类型读取值：配色编号 `3` 保持字符串，文章数量 `9` 是数字，开关 `true` 是布尔值。`--json` 强制将参数作为 JSON；不同终端有自己的引号规则，复杂数组也可通过 `config edit` 修改。
 

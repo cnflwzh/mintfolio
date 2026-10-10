@@ -1,0 +1,42 @@
+---
+import type { Pagination as PaginationData } from '@mintfolio/theme-api/astro';
+
+interface Props {
+  /** Core-owned page numbers and URLs; this component never constructs routes. */
+  pagination: PaginationData;
+}
+const { pagination } = Astro.props;
+const visiblePages = pagination.pages.filter((page) =>
+  page.number === 1 || page.number === pagination.totalPages || Math.abs(page.number - pagination.current) <= 2);
+---
+{pagination.totalPages > 1 && (
+  <nav class="mintfolio-pagination" aria-label="文章分页">
+    {pagination.previous
+      ? <a class="mintfolio-pagination__step" href={pagination.previous} rel="prev">上一页</a>
+      : <span class="mintfolio-pagination__step" aria-disabled="true">上一页</span>}
+    <ol class="mintfolio-pagination__pages">
+      {visiblePages.map((page, index) => (
+        <>
+          {index > 0 && page.number - visiblePages[index - 1].number > 1 && <li class="mintfolio-pagination__gap" aria-hidden="true">…</li>}
+          <li>
+            <a class="mintfolio-pagination__page" href={page.url} aria-label={`第 ${page.number} 页`}
+              aria-current={page.number === pagination.current ? 'page' : undefined}>{page.number}</a>
+          </li>
+        </>
+      ))}
+    </ol>
+    {pagination.next
+      ? <a class="mintfolio-pagination__step" href={pagination.next} rel="next">下一页</a>
+      : <span class="mintfolio-pagination__step" aria-disabled="true">下一页</span>}
+  </nav>
+)}
+<style>
+  .mintfolio-pagination { display: flex; justify-content: center; align-items: center; gap: .6rem; flex-wrap: wrap; margin-block: 2rem; color: var(--mintfolio-pagination-color, inherit); }
+  .mintfolio-pagination__pages { display: flex; align-items: center; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; gap: .35rem; }
+  .mintfolio-pagination :is(a,span) { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; padding-inline: .8rem; border: 1px solid var(--mintfolio-pagination-border, #8887); border-radius: var(--mintfolio-pagination-radius, .5rem); color: inherit; text-decoration: none; background: var(--mintfolio-pagination-background, transparent); }
+  .mintfolio-pagination__page { min-width: 2.5rem; box-sizing: border-box; }
+  .mintfolio-pagination [aria-current="page"] { background: var(--mintfolio-pagination-active-background, #d8f690); color: var(--mintfolio-pagination-active-color, #18220b); border-color: var(--mintfolio-pagination-active-background, #d8f690); font-weight: 700; }
+  .mintfolio-pagination [aria-disabled="true"] { opacity: .45; }
+  .mintfolio-pagination a:focus-visible { outline: 2px solid var(--mintfolio-pagination-focus, currentColor); outline-offset: 3px; }
+  .mintfolio-pagination__gap { padding-inline: .2rem; }
+</style>

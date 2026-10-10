@@ -9,10 +9,10 @@ export default defineTheme({
   manifest: {
     id: 'minimal',
     name: 'Minimal',
-    version: '1.0.0',
+    version: '0.3.0',
     author: 'Mintfolio contributors',
     description: '用于阅读和文字归档的单栏博客主题。',
-    engine: '^1.0.0',
+    engine: '^1.1.0',
   },
   capabilities: {
     search: true,
