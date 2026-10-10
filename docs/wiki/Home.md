@@ -20,6 +20,6 @@ Mintfolio 是基于 Astro 的个人主页与 Markdown 博客工具。Core 管理
 - [标准组件](Components)
 - [常见问题](Troubleshooting)
 
-源码：[Mintfolio](https://github.com/cnflwzh/mintfolio) · [Verdant](https://github.com/cnflwzh/mintfolio-theme-verdant) · [Theme API](https://github.com/cnflwzh/mintfolio-theme-api) · [Theme Starter](https://github.com/cnflwzh/mintfolio-theme-starter)
+源码：[Mintfolio](https://github.com/MintfolioBlog/mintfolio) · [Verdant](https://github.com/MintfolioBlog/mintfolio-theme-verdant) · [Theme API](https://github.com/MintfolioBlog/mintfolio-theme-api) · [Theme Starter](https://github.com/MintfolioBlog/mintfolio-theme-starter)
 
 发现问题时，请在对应仓库提交 Issue，附版本、复现步骤和脱敏后的日志。

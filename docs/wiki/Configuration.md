@@ -50,3 +50,5 @@ export default defineSiteConfig({
 主题专属配置是原生 ESM，图片使用 public 路径或 URL。不要在该文件里直接导入未经处理的图片文件。
 
 更多外观设置与合并规则见[主题管理](Themes)。
+
+分页、时区、作者注册表、导航、SEO 与订阅配置见 [博客功能](Blogging-Features)。这些属于 Core 的站点配置；主题设置只控制视觉与布局。

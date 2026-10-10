@@ -1,6 +1,6 @@
 {
   "name": "@mintfolio/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A Markdown blog and personal site toolkit, built with Astro.",
   "type": "module",
   "engines": {
@@ -16,7 +16,9 @@
     "README.md",
     "docs/cli.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "docs/deployment.md",
+    "docs/performance.md"
   ],
   "exports": {
     ".": {
@@ -53,12 +55,17 @@
   "dependencies": {
     "@astrojs/compiler": "^2.13.1",
     "@babel/parser": "^7.29.8",
-    "@mintfolio/theme-api": "^1.0.0",
+    "@mintfolio/theme-api": "^1.1.0",
+    "@types/sanitize-html": "^2.16.1",
     "astro": "^7.3.2",
     "es-module-lexer": "^1.7.0",
+    "github-slugger": "^2.0.0",
     "import-meta-resolve": "^4.2.0",
+    "sanitize-html": "^2.17.7",
+    "satteri": "^0.10.5",
     "semver": "^7.8.5",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "ultrahtml": "^1.7.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
@@ -73,16 +80,17 @@
     "test": "npm run test:unit && npm run test:boundaries",
     "test:unit": "npm run build && node --experimental-strip-types --test tests/*.test.mjs",
     "test:boundaries": "npm run build && node tools/verify-theme-boundaries.mjs",
-    "deps:update": "node tools/update-local-deps.mjs"
+    "deps:update": "node tools/update-local-deps.mjs",
+    "benchmark:content": "node tools/benchmark-content.mjs"
   },
   "license": "GPL-3.0-only",
   "author": "CNFLWZH",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cnflwzh/mintfolio.git"
+    "url": "git+https://github.com/MintfolioBlog/mintfolio.git"
   },
-  "homepage": "https://github.com/cnflwzh/mintfolio/wiki",
+  "homepage": "https://github.com/MintfolioBlog/mintfolio#readme",
   "bugs": {
-    "url": "https://github.com/cnflwzh/mintfolio/issues"
+    "url": "https://github.com/MintfolioBlog/mintfolio/issues"
   }
 }

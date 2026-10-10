@@ -4,6 +4,7 @@
 - [快速开始](Getting-Started)
 - [站点配置](Configuration)
 - [写作](Writing)
+- [博客功能](Blogging-Features)
 - [主题管理](Themes)
 - [部署](Deployment)
 - [命令行](CLI)

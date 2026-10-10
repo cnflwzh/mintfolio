@@ -25,14 +25,14 @@ draft: false
 | --- | --- | --- |
 | `title` | 是 | 文章标题 |
 | `pubDate` | 是 | 能转换为日期的值，建议使用 YYYY-MM-DD |
-| `description` | 是 | 公开摘要 |
+| `description` | 否 | 公开摘要，默认空字符串 |
 | `category` | 否 | 单个分类 |
 | `tags` | 否 | 标签字符串数组 |
 | `cover` | 否 | 封面图片路径或 URL |
 | `draft` | 否 | 默认为 false；CLI 新建文章会显式设为 true |
 | `password` | 否 | 非空密码；正文构建为密文 |
 
-文章 ID 来自文件路径，例如 `notes/first.md` 对应 `notes/first`。修改文件名会影响文章地址；已有外链需要自行安排重定向。
+文章 ID 来自文件路径，例如 `notes/first.md` 对应 `notes/first`。可以用 frontmatter `slug` 固定公开地址，`aliases` 自动生成旧地址跳转页；文件 ID 不随 slug 改变。完整字段和例子见 [博客功能](Blogging-Features)。
 
 ## 常用命令
 
@@ -51,4 +51,4 @@ mintfolio post draft first
 
 密码文章需要支持 `encryptedPosts` 的主题。请通过 HTTPS 部署以使用浏览器 Web Crypto。不要将含密码的文章源码放进公开仓库；加密功能保护构建输出，源码仍包含正文和密码。
 
-草稿不会出现在公开页面、搜索、RSS 或 Sitemap 中。搜索匹配标题与公开摘要，不是正文全文搜索。
+草稿和未来文章不会出现在生产页面、搜索、订阅或 Sitemap 中。`mintfolio dev --drafts` 可以本地预览，预览页带 noindex。全文搜索使用公开正文；密码文章仅使用安全元数据。未来日期不会触发后台任务，需要到期后重新构建部署。

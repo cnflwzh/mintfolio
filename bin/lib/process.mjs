@@ -9,11 +9,16 @@ import { exists } from './files.mjs';
  * @param {string} executable Executable path.
  * @param {string[]} args Literal argument vector; never interpolated shell code.
  * @param {string} cwd Working directory.
+ * @param {{env?:Record<string,string|undefined>,stdio?:'inherit'|'stderr'}} [options]
+ *   Environment overrides; undefined removes an inherited value. stderr keeps stdout
+ *   clean for machine-readable callers while forwarding child logs to stderr.
  * @returns {Promise<void>} Reject on launch errors, signals or nonzero status.
  */
-export async function run(executable, args, cwd) {
+export async function run(executable, args, cwd, options = {}) {
+  const env = { ...process.env, ...options.env };
+  for (const key of Object.keys(env)) if (env[key] === undefined) delete env[key];
   await new Promise((resolve, reject) => {
-    const child = spawn(executable, args, { cwd, stdio: 'inherit', shell: false, windowsHide: true });
+    const child = spawn(executable, args, { cwd, env, stdio: options.stdio === 'stderr' ? ['inherit', process.stderr, process.stderr] : 'inherit', shell: false, windowsHide: true });
     const forward = () => child.kill('SIGINT');
     process.once('SIGINT', forward);
     child.once('error', error => { process.removeListener('SIGINT', forward); reject(error); });

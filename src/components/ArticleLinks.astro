@@ -1,0 +1,25 @@
+---
+import type { PostPageData } from '@mintfolio/theme-api/astro';
+interface Props { /** Core has already ranked related posts and ordered the series. */ page:PostPageData }
+const {page}=Astro.props;
+---
+<div class="mintfolio-article-links">
+  {page.post.series&&(page.seriesPosts?.length??0)>0&&<nav aria-label="系列文章" class="mintfolio-series">
+    <h2><a href={page.post.series.url}>系列 · {page.post.series.label}</a></h2>
+    <ol>{page.seriesPosts!.map(post=><li><a href={post.url} aria-current={post.id===page.post.id?'page':undefined}>{post.title}</a></li>)}</ol>
+  </nav>}
+  {(page.related?.length??0)>0&&<section class="mintfolio-related" aria-label="相关文章"><h2>继续阅读</h2><ul>{page.related!.map(post=><li><a href={post.url}>{post.title}</a><p>{post.description}</p></li>)}</ul></section>}
+  {(page.previous||page.next)&&<nav class="mintfolio-adjacent" aria-label="相邻文章"><span>{page.previous&&<a href={page.previous.url}>← {page.previous.title}</a>}</span><span>{page.next&&<a href={page.next.url}>{page.next.title} →</a>}</span></nav>}
+</div>
+<style>
+  .mintfolio-article-links{margin-block:3rem 1rem;border-top:1px solid var(--mintfolio-links-border,#8886);padding-top:1.5rem;overflow-wrap:anywhere}
+  .mintfolio-article-links h2{font-size:1.1rem;margin:0 0 .8rem}
+  .mintfolio-article-links a{color:inherit;text-underline-offset:.2em}
+  .mintfolio-article-links a[aria-current]{font-weight:750}
+  .mintfolio-series{margin-bottom:2rem}
+  .mintfolio-series ol{padding-left:1.3rem;line-height:1.9}
+  .mintfolio-related ul{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));gap:1.3rem}
+  .mintfolio-related p{font-size:.9rem;line-height:1.6;opacity:.75}
+  .mintfolio-adjacent{border-top:1px solid var(--mintfolio-links-border,#8886);padding-top:1rem;margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+  .mintfolio-adjacent span:last-child{text-align:right}
+</style>

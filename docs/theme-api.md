@@ -2,7 +2,7 @@
 
 Mintfolio 的布局主题是一个独立模块：Core 负责内容公开策略、URL、路由、SEO 和受保护文章的密文，主题只负责用公开数据渲染页面。主题可以拥有任意 HTML、CSS 和浏览器交互，不需要也不能继承默认主题的布局。
 
-`@mintfolio/core` 0.2.x 提供完整引擎和主题公共入口，内部依赖 `@mintfolio/theme-api` 1.x 契约层。各组件独立发布。组件关系见 [Core 与主题包](core-packages.md)。
+`@mintfolio/core` 0.3.x 提供完整引擎和主题公共入口，内部依赖 `@mintfolio/theme-api` 1.x 契约层。各组件独立发布。组件关系见 [Core 与主题包](https://github.com/MintfolioBlog/mintfolio/blob/main/docs/core-packages.md)。
 
 ## 公开入口与边界
 
@@ -32,7 +32,7 @@ export default defineTheme({
     version: '1.0.0',
     author: 'Example author',
     description: 'A quiet reading theme.',
-    engine: '^1.0.0',
+    engine: '^1.1.0',
   },
   capabilities: {
     search: true,
@@ -58,7 +58,7 @@ export default defineTheme({
 
 可声明的页面为 `home`、`post`、`page`、`archive`、`notFound`。`home`/`post` 必需；缺少其余页面时，Core 按页使用内置 Minimal。Core 持有 `/`、`/about`、`/blog`、`/blog/[...slug]`、`/404`、RSS 和 Sitemap 路由。
 
-搜索、标签和分类共用 `/blog?q=…&tag=…&category=…` 与 `archive` renderer，由浏览器控制器执行组合过滤。它们不是独立页面槽位；清单中的 `pages.tag/category/search` 会报错，防止接受一个不会被路由调用的 renderer。主题应使用提供的 URL，避免自行注册冲突端点。
+标签、分类、系列及静态分页使用独立 URL，共用 `archive` renderer。旧 `/blog?q=…&tag=…&category=…` 链接由全站搜索组件继续支持。它们不是独立页面槽位；清单中的 `pages.tag/category/search` 会报错，防止接受一个不会被路由调用的 renderer。主题应使用提供的 URL，避免自行注册冲突端点。
 
 设置支持 `string`、`boolean`、`number`、`select`、`color`、`object`、`array`。每项均有 `label` 和 `default`；number 可定义边界，select 定义字符串选项，color 使用十六进制。object 定义 `properties`，array 定义 `items`。对象递归补齐默认值；数组显式替换并保留顺序。未知键或错误值会按路径报错，包括数组下标。`InferSettings` 推导完整嵌套类型。
 
@@ -106,6 +106,8 @@ const { theme, page } = Astro.props;
 
 `theme.site` 是扁平的公开站点投影：`title`、`description`、`url`、`language`、`profile`、`social`、`skills`、`projects`、`contact` 和可选 `icp`。它不包含旧布局配置或导入的宿主模块。`theme.navigation` 是 `{id, label, url}` 列表，主题可以重排或省略这些链接。
 
+`PostSummary` 还提供可选 `updatedAt`、`wordCount`、`readingMinutes`、`pinned`、`authors`、`series`、`seo` 和本地 `preview`。受保护文章不提供正文统计。
+
 `PostSummary` 提供 `id`、`url`、`title`、`description`、ISO 字符串 `publishedAt`、`tags`、`category`、可选 `cover` 与 `protected`。每个 taxonomy term 都有 Core 生成的 `{id, label, url}`。受保护文章的描述是 Core 的公开占位文本；原始内容集合条目、frontmatter 口令和正文永远不会进入这个 DTO。
 
 所有地址由 Core 提供。文章必须链接 `post.url`，标签/分类必须链接 `term.url`，其他页面使用 `theme.urls.home()`、`archive(filters?)`、`page(id)`、`post(id)`、`tag(label)`、`category(label)`、`rss()` 和 `sitemap()`。不要拼接 `/blog/${id}`、`/about` 或查询字符串。
@@ -122,9 +124,20 @@ const months = await theme.taxonomy.archives();
 const index = await theme.search.index();
 ```
 
-查询只匹配标题与公开摘要，忽略大小写；tag/category 按显示标签精确匹配。`theme` 含有构建期函数，不能整体序列化给客户端。
+`theme.content.posts({q})` 使用公开全文索引，忽略大小写，多词使用 AND；tag/category 按显示标签精确匹配。`theme` 含有构建期函数，不能整体序列化给客户端。
 
 `page` 是带 `kind` 的联合：`HomePageData` 有 `posts`；`PostPageData` 有 `post`、`body`、`previous`、`next`；`ArchivePageData` 有完整 `posts` 和初始 `filters`；`StaticPageData` 有 `id` 与 `profile`；列表/404 页面也都有 `title`、`description`、`url` 与 Core 生成的 `seo`。可将 `seo` 传给 `SeoHead.astro`，或等价地在主题自己的 `<head>` 中渲染 canonical、robots、描述和 Open Graph 数据。
+
+## 1.1 新增页面与内容服务
+
+- `ArchivePageData.posts` 是当前静态页的文章；`pagination` 提供当前页、总页数、上下页与页码链接。不要再次做客户端切片。
+- `StaticPageData.body` 为独立 Markdown 页的公开 HTML/标题；内置 about 仍由 `profile` 提供。
+- `PostPageData.related` 与 `seriesPosts` 由 Core 排序；主题直接呈现。
+- `theme.content.pages()`、`related(id,limit?)`、`taxonomy.series()` 提供页面、关联文章和系列信息。
+- 新 URL 服务为 `archivePage(number,filters?)`、`series(label)`、`jsonFeed()`、`atom()`。
+- `rankSearchResults` 排相关性，`searchWithHighlights` 返回纯文本片段和 UTF-16 高亮坐标；不输出 HTML。
+
+主题应优先复用 SearchPanel/Pagination/PostMeta/ArticleLinks；[博客功能](Blogging-Features) 包含站点侧配置。
 
 ## 静态归档筛选
 
@@ -139,7 +152,7 @@ const next = writeFiltersToUrl(filters, new URL(window.location.href));
 history.replaceState(history.state, '', next.toString());
 ```
 
-`createSearchEntry()` 仅生成已小写化的标题、摘要和 taxonomy 匹配数据，仍保留 `id` 和 `url`。`searchPosts()` 与 `filterPosts()` 不排序、不分页、不修改输入，也不会读取正文；前者接收 SearchEntry，后者接收 PostSummary。`readFiltersFromUrl()` 不读取 `window`，所以也能测试或在服务端使用；`writeFiltersToUrl()` 返回一个新 URL 并保留无关参数和 hash。
+`createSearchEntry(post, bodyText?)` 保留原文大小写和可选公开正文；受保护文章始终丢弃正文参数。`searchPosts()` 与 `filterPosts()` 不排序、不分页、不修改输入，不会读取文件；前者接收可含正文的 SearchEntry，后者仅过滤 PostSummary 元数据。`readFiltersFromUrl()` 不读取 `window`，所以也能测试或在服务端使用；`writeFiltersToUrl()` 返回一个新 URL 并保留无关参数和 hash。
 
 ## 共享控制器与可选组件
 
@@ -237,7 +250,7 @@ npm 包通过 `exports` 导出 `./theme`。显式包名无法解析时构建失�
 
 `overrides.pages` 是相对项目根目录的显式 `.astro` 覆盖，例如 `{ pages: { archive: './my-theme/archive.astro' } }`。覆盖同样必须在项目内，不能指向 Core、路由或主题 Runtime。没有隐式同名文件覆盖，也没有 `extends`/主题继承。
 
-独立作者可从 [Theme Starter](https://github.com/cnflwzh/mintfolio-theme-starter) 开始。主题包应包含 `type: "module"`、`exports: { "./theme": "./theme.mjs" }`、完整的 `files` 白名单，以及 `@mintfolio/core: ^0.2.0` 与 `astro: ^7.3.2` 的 peerDependencies。主题使用底层 SDK 时额外声明该依赖。开发与包职责见 [组件说明](core-packages.md)。
+独立作者可从 [Theme Starter](https://github.com/MintfolioBlog/mintfolio-theme-starter) 开始。主题包应包含 `type: "module"`、`exports: { "./theme": "./theme.mjs" }`、完整的 `files` 白名单，以及 `@mintfolio/core: ^0.3.0` 与 `astro: ^7.3.2` 的 peerDependencies。主题使用底层 SDK 时额外声明该依赖。开发与包职责见 [组件说明](https://github.com/MintfolioBlog/mintfolio/blob/main/docs/core-packages.md)。
 
 
 ## 本地检查

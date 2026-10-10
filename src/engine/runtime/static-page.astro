@@ -1,0 +1,17 @@
+---
+import { prepareContentHtml } from '../../server/contentHtml';
+import '../../components/content.css';
+import type { StaticPageData, ArticleHeading } from '@mintfolio/theme-api/astro';
+import { activeTheme,getRenderer } from 'virtual:mintfolio/theme';
+import { createThemeContext } from '../context';
+import { summarizePage,type InternalPage } from '../../server/pagesContent';
+import { pageSeo } from '../../server/seo';
+interface Props {entry:InternalPage;headings:ArticleHeading[]}
+const {entry,headings}=Astro.props;
+const theme=await createThemeContext(activeTheme);
+const summary=summarizePage(entry);
+const html=prepareContentHtml(await Astro.slots.render('default'));
+const page:StaticPageData={kind:'page',...summary,profile:theme.site.profile,body:{kind:'public',html,headings},seo:pageSeo(theme.site,summary.title,summary.description,summary.url,undefined,Boolean(summary.preview),summary.seo)};
+const Renderer=getRenderer('page');
+---
+<Renderer theme={theme} page={page}/>

@@ -35,8 +35,8 @@ export default defineSiteConfig({
   profile: { name: '作者', bio: '欢迎来到我的博客。' },
 });
 `);
-  await writeNew(root, 'src/content.config.ts', `import { createBlogCollection } from '@mintfolio/core/content';
-export const collections = { blog: createBlogCollection() };
+  await writeNew(root, 'src/content.config.ts', `import { createBlogCollection, createPageCollection } from '@mintfolio/core/content';
+export const collections = { blog: createBlogCollection(), pages: createPageCollection() };
 `);
   await writeNew(root, 'tsconfig.json', JSON.stringify({ extends: 'astro/tsconfigs/strict', include: ['.astro/types.d.ts', 'src/**/*', 'site.config.ts'] }, null, 2) + '\n');
   await mkdir(path.join(root, 'public'), { recursive: true });
@@ -53,6 +53,17 @@ tags: ["开始"]
 把 Markdown 文章放到 \`content/blog/\`，Core 会生成文章、归档和订阅源。
 
 安装主题包后，在 \`theme.config.mjs\` 中填写包名即可切换布局。
+`);
+  await writeNew(root, 'content/pages/links.md', `---
+title: "友情链接"
+description: "收藏值得阅读的网站。"
+---
+
+## 发现更多
+
+- [Astro](https://astro.build/)
+
+本页由 \`content/pages/links.md\` 生成，地址是 \`/links\`；可在站点 navigation 中添加入口。
 `);
   const filename = path.join(root, 'package.json');
   const existing = await readFile(filename, 'utf8').catch((error) => { if (error.code === 'ENOENT') return '{}'; throw error; });
