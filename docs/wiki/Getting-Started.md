@@ -17,13 +17,16 @@ mintfolio dev
 
 | 路径 | 用途 |
 | --- | --- |
-| `site.config.ts` | 标题、正式域名、简介和个人资料 |
-| `theme.config.mjs` | 当前主题选择、显式覆盖 |
-| `theme-verdant.config.mjs` | Verdant 的专属外观设置 |
-| `content/blog/` | Markdown 文章 |
-| `public/` | 直接复制到构建产物的静态资源 |
-| `src/content.config.ts` | 注册 Core 的博客集合 |
-| `astro.config.mjs` | 注册 Mintfolio 的 Astro integration |
+| `*.md`、子目录里的 `*.md` | 文章：站点根目录就是文章目录 |
+| `_mintfolio/site.config.ts` | 标题、正式域名、简介和个人资料 |
+| `_mintfolio/theme.config.mjs` | 当前主题和主题设置 |
+| `_mintfolio/pages/` | 独立页面 |
+| `_mintfolio/public/` | 直接复制到构建产物的静态资源 |
+| `_mintfolio/package.json` | 依赖；`node_modules/` 和构建输出 `dist/` 也在这里 |
+
+以 `_` 或 `.` 开头的文件和目录，以及 README 等仓库说明文件不会作为文章发布。Astro 所需的配置和内容集合由 Core 在 `_mintfolio/.generated/` 中生成，不需要管理。
+
+在站点里直接运行 `mintfolio` 会打开菜单，可以完成写文章、预览、构建和调整主题等常用操作。
 
 先将 `site.config.ts` 的标题与 URL 改成自己的，再创建文章：
 

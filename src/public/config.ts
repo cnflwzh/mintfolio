@@ -1,4 +1,6 @@
-import type { ContactInfo, Project, PublicProfile, SkillCategory, SocialLink, PublicAuthor, NavigationLink } from '@mintfolio/theme-api';
+// Sites have no tsconfig.json; this gives site.config.ts the types for image imports.
+/// <reference types="astro/client" preserve="true" />
+import type { ContactInfo, Project, PublicProfile, SkillCategory, SocialLink, PublicAuthor, NavigationLink, AnalyticsConfig } from '@mintfolio/theme-api';
 
 /** Host-owned content. Theme-specific display settings belong in theme.config.mjs. */
 export interface SiteConfig {
@@ -14,6 +16,8 @@ export interface SiteConfig {
   feed?: { limit?: number; content?: 'summary' | 'full' };
   authors?: PublicAuthor[];
   navigation?: NavigationLink[];
+  /** Core-owned analytics; only production builds may inject tracking. */
+  analytics?: AnalyticsConfig;
 }
 
 /** Only a title and absolute HTTP(S) site URL are required to create a blog. */
@@ -30,17 +34,32 @@ export interface SiteConfigInput {
   feed?: { limit?: number; content?: 'summary' | 'full' };
   authors?: PublicAuthor[];
   navigation?: NavigationLink[];
+  /** Core-owned analytics; only production builds may inject tracking. */
+  analytics?: AnalyticsConfig;
 }
 
 /**
  * Complete optional author fields without exposing any theme-specific defaults.
  * @param input Public site content, including the deployment URL.
  * @returns Fully populated content suitable for Core's explicit public projection.
+ * @throws On invalid site URLs, content options or Google Analytics settings.
  */
 export function defineSiteConfig(input: SiteConfigInput): SiteConfig {
   const url = new URL(input.site.url);
   if (!['http:', 'https:'].includes(url.protocol)) throw new Error('[mintfolio:config] site.url must use HTTP or HTTPS');
   if (!input.site.title.trim()) throw new Error('[mintfolio:config] site.title must not be empty');
+  const google = input.analytics?.google;
+  let analytics: AnalyticsConfig | undefined;
+  if (google !== undefined) {
+    if (!google || typeof google.measurementId !== 'string'
+      || !/^G-[A-Z0-9]+$/.test(google.measurementId.trim())) {
+      throw new Error('[mintfolio:config] analytics.google.measurementId must be a GA4 ID such as G-XXXXXXXXXX');
+    }
+    if (google.enabled !== undefined && typeof google.enabled !== 'boolean') {
+      throw new Error('[mintfolio:config] analytics.google.enabled must be a boolean');
+    }
+    analytics = { google: { measurementId: google.measurementId.trim(), enabled: google.enabled ?? true } };
+  }
   const pageSize = input.blog?.pageSize ?? 10;
   const limit = input.feed?.limit ?? 50;
   const timezone = input.blog?.timezone ?? 'UTC';
@@ -58,6 +77,7 @@ export function defineSiteConfig(input: SiteConfigInput): SiteConfig {
     if (!link.id?.trim() || !link.label?.trim() || !/^(?:\/(?!\/)|https?:\/\/)/i.test(link.url)) throw new Error('[mintfolio:config] navigation needs id, label and a safe URL');
   }
   return {
+    ...(analytics ? { analytics } : {}),
     blog: { pageSize, timezone },
     feed: { limit, content: input.feed?.content ?? 'summary' },
     seo: input.seo ?? {}, authors: input.authors ?? [],

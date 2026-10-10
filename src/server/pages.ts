@@ -13,13 +13,11 @@ export async function homePage(theme: ThemeContext): Promise<HomePageData> {
 export async function archivePage(theme:ThemeContext, options:{number?:number;kind?:'tag'|'category'|'series';label?:string}={}):Promise<ArchivePageData> {
   const {kind,label}=options;
   const current=options.number??1;
-  const filters={q:'',tag:kind==='tag'?label??'':'',category:kind==='category'?label??'':''};
-  let posts=(await theme.content.posts(filters)).items;
-  if(kind==='series') posts=posts.filter(post=>post.series?.id===label).toSorted((a,b)=>(a.series?.order??Infinity)-(b.series?.order??Infinity)||Date.parse(a.publishedAt)-Date.parse(b.publishedAt));
+  const filters={q:'',tag:kind==='tag'?label??'':'',category:kind==='category'?label??'':'',...(kind==='series'?{series:label??''}:{})};
+  const posts=kind==='series' ? await theme.content.series(label??'') : (await theme.content.posts(filters)).items;
   const pageSize=theme.site.blog?.pageSize??10,totalPages=Math.max(1,Math.ceil(posts.length/pageSize));
   if(!Number.isSafeInteger(current)||current<1||current>totalPages) throw new Error('Unknown archive page');
-  const base=kind==='series'?theme.urls.series(label!):theme.urls.archivePage(1,filters);
-  const link=(number:number)=>number===1?base:base+'/page/'+number;
+  const link=(number:number)=>theme.urls.archivePage(number,filters);
   const title=label?(kind==='tag'?'标签：':kind==='category'?'分类：':'系列：')+label:'全部文章';
   const description=label?'浏览 '+label+' 的全部文章。':'记录开发、设计与生活中的探索。';
   const url=link(current);

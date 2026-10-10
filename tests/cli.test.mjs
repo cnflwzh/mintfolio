@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -8,10 +8,11 @@ import { promisify } from 'node:util';
 import { configSource, setSourceValue, sourceNode, sourceValue } from '../bin/lib/config-source.mjs';
 import { configFilename, configSchema, getConfig, setConfig } from '../bin/lib/config.mjs';
 import { createPost, listPosts, setDraft } from '../bin/lib/posts.mjs';
-import { activeTheme, packageSpec, useTheme } from '../bin/lib/themes.mjs';
+import { activeTheme, initThemeSettings, packageSpec, useTheme } from '../bin/lib/themes.mjs';
 import { findSite, saveFile, within } from '../bin/lib/files.mjs';
 import { npmEntry } from '../bin/lib/process.mjs';
 import { initialize } from '../bin/lib/init.mjs';
+import { prepareRuntime } from '../bin/lib/runtime.mjs';
 
 const workspace = fileURLToPath(new URL('..', import.meta.url));
 const cache = path.join(workspace, '.cache');
@@ -20,12 +21,14 @@ const cli = path.join(workspace, 'bin/mintfolio.mjs');
 
 async function fixture(t) {
   await mkdir(cache, { recursive: true });
-  const root = await mkdtemp(path.join(cache, 'cli-unit-'));
+  const site = await mkdtemp(path.join(cache, 'cli-unit-'));
   t.after(async () => {
-    const target = await realpath(root);
+    const target = await realpath(site);
     assert.ok(target !== await realpath(cache) && within(target, await realpath(cache)));
     await rm(target, { recursive: true, force: true });
   });
+  const root = path.join(site, '_mintfolio');
+  await mkdir(root);
   await writeFile(path.join(root, 'package.json'), '{"name":"cli-fixture","type":"module"}\n');
   await writeFile(path.join(root, 'theme.config.mjs'), 'export default {};\n');
   await writeFile(path.join(root, 'site.config.ts'), `import { defineSiteConfig } from '@mintfolio/core/config';
@@ -132,8 +135,7 @@ test('CLI file writes reject escaping slugs, symlinks and stale inspected conten
   const root = await fixture(t);
   const outside = await fixture(t);
   for (const slug of ['../escape', '/absolute', 'C:\\escape', 'nested/../../escape', 'NUL', 'name.md/next']) await assert.rejects(createPost(root, 'Unsafe', { slug }));
-  await mkdir(path.join(root, 'content/blog'), { recursive: true });
-  await symlink(outside, path.join(root, 'content/blog/linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  await symlink(outside, path.join(path.dirname(root), 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(createPost(root, 'Escape', { slug: 'linked/post' }), /符号链接/);
   const filename = path.join(root, 'theme.config.mjs');
   await assert.rejects(saveFile(root, filename, 'stale', 'changed'), /已被其他程序修改/);
@@ -172,38 +174,55 @@ test('typed site and theme edits validate before writing and preserve numeric st
   assert.equal(await getConfig(root, 'theme', 'palette'), '2');
   assert.equal(await getConfig(root, 'theme', 'count'), 10);
   assert.equal(await getConfig(root, 'theme', 'panel.enabled'), true);
-  const file = path.join(root, 'theme-custom.config.mjs');
-  const beforeInvalid = await readFile(file, 'utf8');
+  const file = path.join(root, 'theme.config.mjs');
+  const written = await readFile(file, 'utf8');
+  assert.match(written, /"settings": \{/);
+  assert.match(written, /"palette": "2"/);
   await assert.rejects(setConfig(root, 'theme', 'count', '100'));
-  assert.equal(await readFile(file, 'utf8'), beforeInvalid);
+  assert.equal(await readFile(file, 'utf8'), written);
+  await assert.rejects(setConfig(root, 'theme', 'palette', '1', { theme: 'minimal' }), /只保存当前主题/);
   // A manually broken value must not prevent locating/opening its editor or schema.
-  await writeFile(file, "export default { count: 'invalid' };\n");
+  await writeFile(file, "export default { theme: './custom', settings: { count: 'invalid' } };\n");
   await assert.rejects(getConfig(root, 'theme'));
   assert.equal(await configFilename(root, 'theme'), file);
   assert.equal((await configSchema(root, 'theme')).count.type, 'number');
 });
 
-test('theme switching migrates legacy inline values and restores them when switching back', async t => {
+test('theme switching writes the new theme template and keeps previous settings only in a backup', async t => {
   const root = await fixture(t);
   await localTheme(root);
-  await writeFile(path.join(root, 'theme.config.mjs'), "// Keep selection note\nexport default { theme: './custom', settings: { palette: '2', panel: {enabled:true} } };\n");
-  await setConfig(root, 'theme', 'palette', '1');
-  assert.equal((await activeTheme(root)).settings.palette, '1');
+  const file = path.join(root, 'theme.config.mjs');
+  await writeFile(file, "// Keep selection note\nexport default { theme: './custom', settings: { palette: '2', panel: {enabled:true} } };\n");
+  const customized = await readFile(file, 'utf8');
   await useTheme(root, 'minimal');
   assert.equal((await activeTheme(root)).definition.manifest.id, 'minimal');
-  assert.ok((await readFile(path.join(root, 'theme.config.mjs'), 'utf8')).includes('// Keep selection note'));
+  assert.ok((await readFile(file, 'utf8')).includes('// Keep selection note'));
+  const backups = path.join(root, '.backups');
+  const saved = await Promise.all((await readdir(backups, { recursive: true })).filter(name => name.endsWith('theme.config.mjs')).map(name => readFile(path.join(backups, name), 'utf8')));
+  assert.ok(saved.includes(customized));
   await useTheme(root, './custom');
+  const source = await readFile(file, 'utf8');
+  assert.match(source, /\/\/ Palette/);
   const active = await activeTheme(root);
-  assert.equal(active.settings.palette, '1');
-  assert.equal(active.settings.panel.enabled, true);
-  assert.equal(active.settings.panel.title, 'Panel');
+  assert.deepEqual(active.settings, { palette: '1', count: 6, panel: { enabled: false, title: 'Panel' } });
+  // init fills only empty settings and never overwrites the owner's values.
+  await setConfig(root, 'theme', 'palette', '2');
+  const edited = await readFile(file, 'utf8');
+  assert.equal((await initThemeSettings(root)).created, false);
+  assert.equal(await readFile(file, 'utf8'), edited);
+  await writeFile(file, "export default { theme: './custom' };\n");
+  assert.equal((await initThemeSettings(root)).created, true);
+  assert.equal((await activeTheme(root)).settings.count, 6);
+  assert.match(await readFile(file, 'utf8'), /\/\/ Count/);
 });
 
 test('actual CLI accepts quoted titles, subdirectories and aliases, and fails unknown commands', async t => {
   const root = await fixture(t);
-  await mkdir(path.join(root, 'content/blog'), { recursive: true });
-  assert.equal(await findSite(path.join(root, 'content/blog')), await realpath(root));
-  const run = args => exec(process.execPath, [cli, ...args], { cwd: path.join(root, 'content/blog'), windowsHide: true });
+  const notes = path.join(path.dirname(root), 'notes');
+  await mkdir(notes, { recursive: true });
+  assert.equal(await findSite(notes), await realpath(root));
+  assert.equal(await findSite(path.join(root)), await realpath(root));
+  const run = args => exec(process.execPath, [cli, ...args], { cwd: notes, windowsHide: true });
   await run(['post', 'new', '中文标题 with spaces', '--slug', 'real-cli']);
   const listed = JSON.parse((await run(['post', 'list', '--json'])).stdout);
   assert.equal(listed[0].title, '中文标题 with spaces');
@@ -251,19 +270,22 @@ console.log('ASTRO_PROCESS_LOG');
 if(process.env.CLI_ASTRO_FAIL === '1') process.exitCode=1;
 `);
   const capture = path.join(root, 'astro-call.json');
-  const run = (args, env = {}) => exec(process.execPath, [cli, ...args], { cwd: root, windowsHide: true, env: { ...process.env, CLI_CAPTURE_FILE: capture, MINTFOLIO_PREVIEW_DRAFTS: '1', ...env } });
+  // Run from the article root, as an author would.
+  const run = (args, env = {}) => exec(process.execPath, [cli, ...args], { cwd: path.dirname(root), windowsHide: true, env: { ...process.env, CLI_CAPTURE_FILE: capture, MINTFOLIO_PREVIEW_DRAFTS: '1', ...env } });
   return { run, captured: async () => JSON.parse(await readFile(capture, 'utf8')) };
 }
 
 test('CLI draft preview is explicitly enabled only for dev and never reaches production commands', async t => {
   const root = await fixture(t);
   const { run, captured } = await fakeAstro(root);
+  const config = ['--config', '.generated/astro.config.mjs'];
   await run(['dev', '--drafts', '--port', '4322']);
-  assert.deepEqual(await captured(), { args: ['dev', '--port', '4322'], drafts: '1' });
+  assert.deepEqual(await captured(), { args: ['dev', ...config, '--port', '4322'], drafts: '1' });
   for (const command of ['dev', 'build', 'preview', 'sync']) {
     await run([command]);
-    assert.deepEqual(await captured(), { args: [command], drafts: null });
+    assert.deepEqual(await captured(), { args: [command, ...config], drafts: null });
   }
+  for (const flag of ['--config', '--root=.']) await assert.rejects(run(['dev', flag, 'x']), error => error.code === 1 && error.stderr.includes('自动指定'));
   for (const command of ['build', 'preview', 'sync']) await assert.rejects(run([command, '--drafts']), error => error.code === 1 && error.stderr.includes('仅适用于'));
   await assert.rejects(run(['dev', '--drafts=true']), error => error.code === 1);
 });
@@ -280,12 +302,12 @@ test('CLI check produces one JSON document, separates child logs and returns con
     assert.equal(result.environment.status, 'ok');
     assert.equal(result.sync.status, 'ok');
     assert.equal(result.content.errors[0].code, 'MISSING_IMAGE');
-    assert.equal(result.content.errors[0].file, 'content/blog/check.md');
+    assert.equal(result.content.errors[0].file, 'check.md');
     assert.ok(error.stderr.includes('ASTRO_PROCESS_LOG'));
     assert.ok(!error.stdout.includes('private caption'));
     return error.code === 1;
   });
-  assert.deepEqual(await captured(), { args: ['sync'], drafts: null });
+  assert.deepEqual(await captured(), { args: ['sync', '--config', '.generated/astro.config.mjs'], drafts: null });
   await assert.rejects(run(['check', '--json'], { CLI_ASTRO_FAIL: '1' }), error => {
     const result = JSON.parse(error.stdout);
     assert.equal(result.sync.status, 'error');
@@ -323,16 +345,67 @@ test('new core config fields validate complete author registries and preserve fi
   for (const field of ['blog', 'seo', 'feed', 'authors', 'navigation']) assert.ok(schema[field]);
 });
 
-test('site initialization registers pages and preserves existing page content and collection configuration', async t => {
+test('site initialization keeps the article root clean and existing notes untouched', async t => {
   const root = await fixture(t);
+  const site = path.dirname(root);
   await initialize(root);
-  const collections = path.join(root, 'src/content.config.ts');
-  const page = path.join(root, 'content/pages/links.md');
-  assert.match(await readFile(collections, 'utf8'), /pages: createPageCollection\(\)/);
+  const page = path.join(root, 'pages/links.md');
   assert.match(await readFile(page, 'utf8'), /title: "友情链接"/);
-  await writeFile(collections, '// owner-defined collections\n');
+  assert.deepEqual((await readdir(root)).filter(name => !name.startsWith('.')).sort(), ['package.json', 'pages', 'public', 'site.config.ts', 'theme.config.mjs']);
+  assert.deepEqual((await readdir(site)).sort(), ['_mintfolio', 'hello.md']);
   await writeFile(page, 'Owner page content\n');
   await initialize(root);
-  assert.equal(await readFile(collections, 'utf8'), '// owner-defined collections\n');
   assert.equal(await readFile(page, 'utf8'), 'Owner page content\n');
+  // A folder that already has notes gets no sample article.
+  const other = await fixture(t);
+  await writeFile(path.join(path.dirname(other), 'note.md'), '---\ntitle: "Note"\npubDate: 2026-01-01\n---\n');
+  await initialize(other);
+  assert.deepEqual((await readdir(path.dirname(other))).sort(), ['_mintfolio', 'note.md']);
+});
+
+test('the article root ignores repository files, underscore and dot folders, and finds the project from anywhere', async t => {
+  const root = await fixture(t);
+  const site = path.dirname(root);
+  const article = title => `---\ntitle: "${title}"\npubDate: 2026-01-01\n---\n`;
+  await mkdir(path.join(site, 'notes'), { recursive: true });
+  await mkdir(path.join(site, '_drafts'), { recursive: true });
+  await mkdir(path.join(site, '.github'), { recursive: true });
+  await writeFile(path.join(site, 'top.md'), article('Top'));
+  await writeFile(path.join(site, 'notes/nested.md'), article('Nested'));
+  await writeFile(path.join(site, 'README.md'), '# Repository readme without frontmatter\n');
+  await writeFile(path.join(site, 'AGENTS.md'), '# Agent notes\n');
+  await writeFile(path.join(site, '_drafts/idea.md'), 'not frontmatter\n');
+  await writeFile(path.join(site, '.github/PULL_REQUEST_TEMPLATE.md'), 'template\n');
+  await writeFile(path.join(root, 'pages.md'), 'inside the project folder\n');
+  assert.deepEqual((await listPosts(root)).map(post => post.slug).sort(), ['notes/nested', 'top']);
+  await assert.rejects(createPost(root, 'Readme', { slug: 'readme' }), /仓库说明文件/);
+  // A pre-0.4 site keeps package.json and theme.config.mjs in its root.
+  const legacy = await fixture(t);
+  const old = path.dirname(legacy);
+  await writeFile(path.join(old, 'package.json'), '{}');
+  await writeFile(path.join(old, 'theme.config.mjs'), 'export default {};\n');
+  await rm(legacy, { recursive: true });
+  await assert.rejects(findSite(old), /旧的站点布局/);
+});
+
+test('runtime files are generated under .generated and legacy layout files fail with instructions', async t => {
+  const root = await fixture(t);
+  assert.equal(await prepareRuntime(root), '.generated/astro.config.mjs');
+  const generated = await readFile(path.join(root, '.generated/astro.config.mjs'), 'utf8');
+  assert.match(generated, /srcDir: '\.\/\.generated\/src'/);
+  // Articles sit beside the project folder, so Vite may serve their images.
+  assert.ok(generated.includes(`allow: [${JSON.stringify(path.dirname(root).replaceAll('\\', '/'))}]`));
+  assert.doesNotMatch(generated, /mergeConfig/);
+  assert.match(await readFile(path.join(root, '.generated/src/content.config.mjs'), 'utf8'), /pages: createPageCollection\(\)/);
+  assert.equal(await readFile(path.join(root, '.generated/.gitignore'), 'utf8'), '# 由 Mintfolio 在每次运行时生成，不需要提交。\n*\n');
+  // An optional host Astro config adds options without owning the integration.
+  await writeFile(path.join(root, 'astro.config.mjs'), "// 这里不需要引入 @mintfolio/core。\nexport default { compressHTML: true };\n");
+  await prepareRuntime(root);
+  assert.match(await readFile(path.join(root, '.generated/astro.config.mjs'), 'utf8'), /import site from '\.\.\/astro\.config\.mjs';[\s\S]*mergeConfig\(site, core\)/);
+  await writeFile(path.join(root, 'astro.config.mjs'), "import mintfolio from '@mintfolio/core';\nexport default { integrations: [mintfolio()] };\n");
+  await mkdir(path.join(root, 'src'), { recursive: true });
+  await writeFile(path.join(root, 'src/content.config.ts'), 'export const collections = {};\n');
+  await writeFile(path.join(root, 'theme-verdant.config.mjs'), 'export default {};\n');
+  await mkdir(path.join(path.dirname(root), 'content/blog'), { recursive: true });
+  await assert.rejects(prepareRuntime(root), error => ['src/content.config.ts', 'theme-verdant.config.mjs', 'astro.config.mjs 不再需要', 'content/blog/ 中的文章移到站点根目录'].every(text => error.message.includes(text)));
 });

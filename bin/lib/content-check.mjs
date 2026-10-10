@@ -4,6 +4,7 @@ import Slugger, { slug as githubSlug } from 'github-slugger';
 import { htmlToHast, markdownToHast } from 'satteri';
 import { isMap, LineCounter, parseDocument } from 'yaml';
 import { checkedPath, within } from './files.mjs';
+import { isArticleDirectory, isArticlePath, PAGES_DIR, PROJECT_DIR, PUBLIC_DIR } from '../../src/shared/layout.mjs';
 
 const posix = value => value.replace(/\\/g, '/');
 const external = value => /^[a-z][a-z\d+.-]*:/i.test(value) || value.startsWith('//');
@@ -70,9 +71,10 @@ function readFrontmatter(source) {
  * only relative filenames, positions and generic messages, never body/frontmatter values.
  * Unknown theme routes are ignored; Markdown-source URLs and unconfirmed heading
  * anchors produce warnings because Astro plugins can rewrite those during rendering.
- * @param {string} root Existing site root.
+ * @param {string} root Existing site root holding the articles (the parent of _mintfolio).
  * @param {{blogDir?:string,pagesDir?:string|false,publicDir?:string}} [options]
- *   Optional content/public directories inside root; pagesDir:false disables pages.
+ *   Optional directories inside root; pagesDir:false disables pages. Articles skip
+ *   `_`/`.` paths and repository documents, matching the content collection.
  * @returns {Promise<{errors:Array<{code:string,file:string,line:number,column:number,message:string}>,warnings:Array<{code:string,file:string,line:number,column:number,message:string}>,counts:{files:number,posts:number,pages:number,links:number,images:number}}>}
  *   Deterministically ordered diagnostics and inspected document/reference counts.
  * @throws {Error} Invalid root/options or an unexpected filesystem access failure.
@@ -85,7 +87,7 @@ export async function checkContent(root, options = {}) {
   const documents = [];
   const byFile = new Map();
   const byRoute = new Map();
-  const publicDir = await checkedPath(base, path.resolve(base, options.publicDir || 'public'));
+  const publicDir = await checkedPath(base, path.resolve(base, options.publicDir || `${PROJECT_DIR}/${PUBLIC_DIR}`));
 
   function report(list, doc, code, message, position = {}) {
     const point = position.start || position;
@@ -100,6 +102,8 @@ export async function checkContent(root, options = {}) {
     for (const entry of entries) {
       const filename = path.join(directory, entry.name);
       const file = posix(path.relative(base, filename));
+      // The article collection shares the site root with the project folder and repository files.
+      if (collection === 'blog' && (entry.isDirectory() ? !isArticleDirectory(entry.name) : !isArticlePath(path.relative(collectionBase, filename)))) continue;
       if (entry.isSymbolicLink()) {
         report(warnings, { file }, 'SKIPPED_SYMLINK', '未读取符号链接；请将需要检查的内容放在站点目录中。');
       } else if (entry.isDirectory()) {
@@ -154,8 +158,8 @@ export async function checkContent(root, options = {}) {
     }
   }
 
-  await collect(await checkedPath(base, path.resolve(base, options.blogDir || 'content/blog')), 'blog');
-  if (options.pagesDir !== false) await collect(await checkedPath(base, path.resolve(base, options.pagesDir || 'content/pages')), 'pages');
+  await collect(await checkedPath(base, path.resolve(base, options.blogDir || '.')), 'blog');
+  if (options.pagesDir !== false) await collect(await checkedPath(base, path.resolve(base, options.pagesDir || `${PROJECT_DIR}/${PAGES_DIR}`)), 'pages');
 
   function register(doc, route, position) {
     if (!route) return;

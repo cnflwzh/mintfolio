@@ -41,6 +41,12 @@ export async function createThemeContext(active:ActiveTheme):Promise<ThemeContex
       },
       post:async(id:string)=>posts.find(post=>post.id===id)??null,
       pages:async()=> (await getPageEntries(true)).map(summarizePage),
+      page:async(id:string)=> {
+        const entry=(await getPageEntries(true)).find(page=>page.id===id);
+        return entry ? summarizePage(entry) : null;
+      },
+      series:async(id:string)=>posts.filter(post=>post.series?.id===id)
+        .toSorted((a,b)=>(a.series?.order??Infinity)-(b.series?.order??Infinity)||Date.parse(a.publishedAt)-Date.parse(b.publishedAt)),
       related:async(id:string,limit?:number)=>relatedPosts(posts,id,limit),
     },
     taxonomy:{tags:async()=>collectTaxonomy(posts,'tags'),categories:async()=>collectTaxonomy(posts,'categories'),series:async()=>collectTaxonomy(posts,'series'),archives:async()=>collectArchives(posts,site.blog?.timezone)},

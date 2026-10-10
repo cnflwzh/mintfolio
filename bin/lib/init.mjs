@@ -1,7 +1,8 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { syncThemeConfigs, reportThemeConfigs } from "../theme-config.mjs";
 import { checkedPath } from './files.mjs';
+import { listPosts } from './posts.mjs';
+import { PAGES_DIR, PROJECT_DIR, PUBLIC_DIR, siteRootOf } from '../../src/shared/layout.mjs';
 
 /** Write scaffold files exclusively: initialization never overwrites site content. */
 async function writeNew(root, relative, source) {
@@ -15,18 +16,19 @@ async function writeNew(root, relative, source) {
 }
 
 /**
- * Scaffold a site without replacing existing files or npm scripts.
- * @param {string} root Existing absolute site directory with Core installed.
- * @returns {Promise<void>} Creates missing config/content files and theme defaults.
+ * Scaffold the project folder without replacing existing files or npm scripts.
+ * The site root keeps only articles; configuration, pages and static files live
+ * in _mintfolio, and Core generates its Astro files there at run time.
+ * @param {string} root Project folder (_mintfolio) with Core installed.
+ * @returns {Promise<void>} Creates missing config files, a sample page, and a sample article only when the site has none.
  */
 export async function initialize(root) {
-  await writeNew(root, '.gitignore', 'node_modules/\ndist/\n.astro/\n.mintfolio/\n.cache/\n.env\n.env.*\n');
-  await writeNew(root, 'astro.config.mjs', `import { defineConfig } from 'astro/config';
-import mintfolio from '@mintfolio/core';
-import theme from './theme.config.mjs';
-export default defineConfig({ integrations: [mintfolio(theme)] });
-`);
-  await writeNew(root, 'theme.config.mjs', `/** Omit theme to use Core's Minimal, or select an installed theme package. */
+  await writeNew(root, '.gitignore', 'node_modules/\ndist/\n.astro/\n.cache/\n.env\n.env.*\n');
+  await writeNew(root, 'theme.config.mjs', `/**
+ * 主题选择与主题设置。
+ * theme 留空时使用内置的 Minimal；安装主题后运行 mintfolio theme use <主题>，
+ * 会在这里写入 theme 和带注释的 settings。settings 只对当前主题生效。
+ */
 export default {};
 `);
   await writeNew(root, 'site.config.ts', `import { defineSiteConfig } from '@mintfolio/core/config';
@@ -35,12 +37,10 @@ export default defineSiteConfig({
   profile: { name: '作者', bio: '欢迎来到我的博客。' },
 });
 `);
-  await writeNew(root, 'src/content.config.ts', `import { createBlogCollection, createPageCollection } from '@mintfolio/core/content';
-export const collections = { blog: createBlogCollection(), pages: createPageCollection() };
-`);
-  await writeNew(root, 'tsconfig.json', JSON.stringify({ extends: 'astro/tsconfigs/strict', include: ['.astro/types.d.ts', 'src/**/*', 'site.config.ts'] }, null, 2) + '\n');
-  await mkdir(path.join(root, 'public'), { recursive: true });
-  await writeNew(root, 'content/blog/hello.md', `---
+  await mkdir(path.join(root, PUBLIC_DIR), { recursive: true });
+  // A folder of existing notes stays exactly as it is.
+  if (!(await listPosts(root)).length) {
+    await writeNew(siteRootOf(root), 'hello.md', `---
 title: "你好，Mintfolio"
 pubDate: 2026-01-01
 description: "这是你的第一篇文章。"
@@ -50,11 +50,12 @@ tags: ["开始"]
 
 ## 开始写作
 
-把 Markdown 文章放到 \`content/blog/\`，Core 会生成文章、归档和订阅源。
+站点根目录里的每个 Markdown 文件都是一篇文章，子目录也可以。以 \`_\` 或 \`.\` 开头的文件和目录不会发布。
 
-安装主题包后，在 \`theme.config.mjs\` 中填写包名即可切换布局。
+站点资料、主题和独立页面都在 \`${PROJECT_DIR}/\` 中；运行 \`mintfolio\` 可以通过菜单完成常用操作。
 `);
-  await writeNew(root, 'content/pages/links.md', `---
+  }
+  await writeNew(root, `${PAGES_DIR}/links.md`, `---
 title: "友情链接"
 description: "收藏值得阅读的网站。"
 ---
@@ -63,7 +64,7 @@ description: "收藏值得阅读的网站。"
 
 - [Astro](https://astro.build/)
 
-本页由 \`content/pages/links.md\` 生成，地址是 \`/links\`；可在站点 navigation 中添加入口。
+本页由 \`${PROJECT_DIR}/${PAGES_DIR}/links.md\` 生成，地址是 \`/links\`；可在站点 navigation 中添加入口。
 `);
   const filename = path.join(root, 'package.json');
   const existing = await readFile(filename, 'utf8').catch((error) => { if (error.code === 'ENOENT') return '{}'; throw error; });
@@ -73,6 +74,5 @@ description: "收藏值得阅读的网站。"
   pkg.type = 'module';
   pkg.scripts = { dev: 'mintfolio dev', build: 'mintfolio build', preview: 'mintfolio preview', ...pkg.scripts };
   await writeFile(filename, JSON.stringify(pkg, null, 2) + '\n');
-  reportThemeConfigs(await syncThemeConfigs(root));
-  process.stdout.write('Ready. Edit site.config.ts, then run npm run dev.\n');
+  process.stdout.write('完成。修改 _mintfolio/site.config.ts 后运行 mintfolio dev，或直接运行 mintfolio 打开菜单。\n');
 }

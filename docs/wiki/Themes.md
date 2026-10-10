@@ -9,28 +9,27 @@ mintfolio theme list
 mintfolio theme check
 ```
 
-Verdant 的 npm 包名是 `@mintfolio/theme-verdant`，主题 ID 为 `verdant`，配置文件名为 `theme-verdant.config.mjs`。CLI 可使用 `verdant` 简写。
+Verdant 的 npm 包名是 `@mintfolio/theme-verdant`，主题 ID 为 `verdant`。CLI 可使用 `verdant` 简写。
 
-## 保存每个主题的设置
+## 主题设置
 
-`theme.config.mjs` 选择当前主题：
+`theme.config.mjs` 同时保存当前主题和它的设置：
 
 ```js
 export default {
   theme: '@mintfolio/theme-verdant',
+  settings: {
+    // 初始配色……
+    initialPalette: '1',
+  },
 };
 ```
 
-`theme-verdant.config.mjs` 保存 Verdant 的设置。安装时 Core 会复制带注释的模板；已有文件始终保留。也可手动补齐：
+`mintfolio theme use verdant` 会写入 `theme`，并把 Verdant 带注释的完整设置模板写入 `settings`。`settings` 为空时，也可以运行 `mintfolio theme init` 补上模板。
 
-```sh
-mintfolio theme init verdant
-mintfolio theme sync
-```
+未填写的字段使用主题默认值；对象递归合并，数组整体替换。未知键和不合法的值会在检查时指出具体路径。`settings` 只对当前主题生效，切换主题前的设置会保存在 `_mintfolio/.backups/` 中。
 
-设置按“主题默认值 → 主题专属文件 → `theme.config.mjs.settings`”生效。对象递归合并，数组整体替换。未知键和不合法的值会在检查时指出具体路径。
-
-升级不会覆盖旧配置。新字段可沿用主题默认值，也可以参考新版本模板自行添加。
+升级主题不会改动已有设置。新字段可沿用主题默认值，也可以参考新版本模板自行添加。
 
 ## 切换与升级
 

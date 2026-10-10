@@ -134,3 +134,29 @@ test('SEO and all feed formats emit absolute deployment URLs for entries, self l
   assert.ok(atom.includes('<id>' + origin + base + 'atom.xml</id>'));
   assert.ok(atom.includes('<link href="' + articleUrl + '"'));
 });
+
+
+test('SDK endpoint and asset URLs respect subdirectory deployment without double prefixes', () => {
+  const urls = createUrls('/博客/');
+  const prefix = '/%E5%8D%9A%E5%AE%A2';
+  assert.equal(urls.searchIndex(), prefix + '/search-index.json');
+  assert.equal(urls.robots(), prefix + '/robots.txt');
+  assert.equal(urls.asset('/images/logo.svg?x=1#icon'), prefix + '/images/logo.svg?x=1#icon');
+  assert.equal(urls.asset(urls.asset('/images/logo.svg')), prefix + '/images/logo.svg');
+  for (const value of ['https://cdn.example/logo.svg', '//cdn.example/logo.svg', './logo.svg', '#icon']) assert.equal(urls.asset(value), value);
+  assert.equal(createUrls().searchIndex(), '/search-index.json');
+});
+
+test('series archive pagination encodes taxonomy labels and preserves combined query filters', () => {
+  const urls = createUrls('/notes/');
+  const series = '中文/Guide';
+  assert.equal(urls.archivePage(1, { series }), urls.series(series));
+  assert.equal(urls.archivePage(3, { series }), urls.series(series) + '/page/3');
+  const combined = new URL(urls.archivePage(2, { tag: 'Web', category: 'Code', series, q: 'Astro & 中文' }), origin);
+  assert.equal(combined.pathname, '/notes/tags/Web/page/2');
+  assert.equal(combined.searchParams.get('series'), series);
+  assert.equal(combined.searchParams.get('category'), 'Code');
+  assert.equal(combined.searchParams.get('q'), 'Astro & 中文');
+  assert.equal(new URL(urls.archive({ series }), origin).searchParams.get('series'), series);
+  for (const page of [0, -1, 1.5, NaN, Infinity]) assert.throws(() => urls.archivePage(page, { series }), /positive integer/);
+});

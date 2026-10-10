@@ -49,9 +49,8 @@ const instanceId = 'mintfolio-search-' + crypto.randomUUID();
 <script>
   import { onPage } from '@mintfolio/core/client';
   import { rankSearchResults, readFiltersFromUrl, searchWithHighlights, writeFiltersToUrl } from '@mintfolio/theme-api/search';
-  import type { PostFilters, PostSummary, SearchEntry, SearchRange } from '@mintfolio/theme-api';
+  import type { PostFilters, SearchPayload, SearchRange } from '@mintfolio/theme-api';
 
-  interface SearchPayload { posts: PostSummary[]; index: SearchEntry[]; }
 
   /** Validate the fields read by this widget before matching or displaying JSON. */
   function parsePayload(value: unknown): SearchPayload {
@@ -61,7 +60,8 @@ const instanceId = 'mintfolio-search-' + crypto.randomUUID();
         && typeof post.title === 'string' && typeof post.protected === 'boolean')
       || !value.index.every((entry) => isRecord(entry) && ['id', 'url', 'title', 'description', 'category'].every((key) => typeof entry[key] === 'string')
         && Array.isArray(entry.tags) && entry.tags.every((tag) => typeof tag === 'string')
-        && (entry.text === undefined || typeof entry.text === 'string'))) {
+        && (entry.text === undefined || typeof entry.text === 'string')
+        && (entry.series === undefined || typeof entry.series === 'string'))) {
       throw new Error('Invalid search index');
     }
     return value as unknown as SearchPayload;
@@ -101,7 +101,7 @@ const instanceId = 'mintfolio-search-' + crypto.randomUUID();
       let composing = false;
       // Only URL query parameters constrain global search. A static taxonomy
       // page's path and page.filters do not silently limit a new site-wide query.
-      let taxonomy = { tag: '', category: '' };
+      let taxonomy = { tag: '', category: '', series: '' };
       const eventOptions = { signal: scope.signal };
 
       // Reuse one lazy request per mounted widget. A failed request can be retried.
@@ -181,10 +181,10 @@ const instanceId = 'mintfolio-search-' + crypto.randomUUID();
         if (resetLimit) resultLimit = 20;
         if (timer !== undefined) window.clearTimeout(timer);
         const filters: PostFilters = { q: input.value.trim(), ...taxonomy };
-        const hasTaxonomy = !!filters.tag || !!filters.category;
+        const hasTaxonomy = !!filters.tag || !!filters.category || !!filters.series;
         clear.hidden = !filters.q;
         resetFilters.hidden = filterSummary.hidden = !hasTaxonomy;
-        const labels = [filters.tag && `标签「${filters.tag}」`, filters.category && `分类「${filters.category}」`].filter(Boolean);
+        const labels = [filters.tag && `标签「${filters.tag}」`, filters.category && `分类「${filters.category}」`, filters.series && `系列「${filters.series}」`].filter(Boolean);
         filterSummary.textContent = hasTaxonomy
           ? `全站筛选：${labels.join(' · ')}。以下显示独立筛选结果，下方归档列表仍为当前页文章。` : '';
         results.replaceChildren();
@@ -202,7 +202,7 @@ const instanceId = 'mintfolio-search-' + crypto.randomUUID();
       };
       const clearSearch = (): void => { input.value = ''; updateUrl(); queueSearch(true); input.focus(); };
       const resetTaxonomy = (clearQuery = false): void => {
-        taxonomy = { tag: '', category: '' };
+        taxonomy = { tag: '', category: '', series: '' };
         if (clearQuery) input.value = '';
         updateUrl();
         queueSearch(true);
@@ -234,7 +234,7 @@ const instanceId = 'mintfolio-search-' + crypto.randomUUID();
       const syncFromUrl = (): void => {
         const filters = readFiltersFromUrl(location.href);
         input.value = filters.q;
-        taxonomy = { tag: filters.tag, category: filters.category };
+        taxonomy = { tag: filters.tag, category: filters.category, series: filters.series ?? '' };
         queueSearch(true);
       };
       window.addEventListener('popstate', syncFromUrl, eventOptions);

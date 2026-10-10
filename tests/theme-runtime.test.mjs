@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { loadTheme } from '../src/engine/loader.mjs';
 import { resolveSettings, validateTheme } from '../src/engine/schema.mjs';
-import { createThemeConfig, syncThemeConfigs } from '../bin/theme-config.mjs';
+import { settingsTemplate } from '../bin/theme-config.mjs';
 
 const workspace = fileURLToPath(new URL('..', import.meta.url));
 const cacheRoot = path.join(workspace, '.cache');
@@ -157,7 +157,7 @@ test('nested settings merge defaults and validate every array item and unknown k
   assert.throws(() => validateTheme(definition({ pages: { ...definition().pages, search: './search.astro' } }), 'unused-slot'), /pages/);
 });
 
-test('theme-specific config is loaded, nested inline overrides are preserved, and edits reload', async (t) => {
+test('theme settings come only from theme.config.mjs and merge nested defaults', async (t) => {
   const root = await projectFixture(t);
   const themeRoot = path.join(root, 'theme');
   const settings = {
@@ -168,47 +168,43 @@ test('theme-specific config is loaded, nested inline overrides are preserved, an
     }},
   };
   await writeTheme(themeRoot, definition({settings}));
-  const configFile = path.join(root, 'theme-fixture.config.mjs');
-  await writeFile(configFile, "export default { heading: 'File title', sidebar: {enabled:false,links:['/blog']} };\n");
-  const active = await loadTheme({root,theme:'./theme',settings:{sidebar:{links:[]}}});
-  assert.deepEqual(active.settings,{heading:'File title',sidebar:{enabled:false,links:[]}});
-  assert.equal(active.themeConfigFile,configFile);
-  await writeFile(configFile, "export default { heading: 'Updated title' };\n");
-  assert.equal((await loadTheme({root,theme:'./theme'})).settings.heading,'Updated title');
-  await writeFile(configFile, "export default { sidebar: {enabld:true} };\n");
-  await assert.rejects(loadTheme({root,theme:'./theme'}), /sidebar.enabld/);
-  await writeFile(configFile, 'export default null;\n');
-  await assert.rejects(loadTheme({root,theme:'./theme'}), /theme-fixture.config.mjs.*plain settings object/);
+  // A leftover per-theme file from the old layout is never read by the engine.
+  await writeFile(path.join(root, 'theme-fixture.config.mjs'), "export default { heading: 'Ignored title' };\n");
+  const active = await loadTheme({root,theme:'./theme',settings:{sidebar:{links:['/blog']}}});
+  assert.deepEqual(active.settings,{heading:'Notes',sidebar:{enabled:true,links:['/blog']}});
+  assert.equal('themeConfigFile' in active,false);
+  await assert.rejects(loadTheme({root,theme:'./theme',settings:{sidebar:{enabld:true}}}), /sidebar.enabld/);
 });
 
-test('config generation includes schema defaults and never overwrites an existing user file', async (t) => {
+/** Evaluate a settings template exactly as it will appear inside theme.config.mjs. */
+async function evaluateTemplate(root, text, name) {
+  const filename = path.join(root, `${name}.mjs`);
+  await writeFile(filename, `export default ${text};\n`);
+  return (await import(pathToFileURL(filename).href)).default;
+}
+
+test('settings templates list every schema default when a theme ships no template', async (t) => {
   const root = await projectFixture(t);
   await writeTheme(path.join(root,'theme'));
-  const result = await createThemeConfig(root,'./theme');
-  assert.equal(result.created,true);
-  assert.deepEqual((await import(pathToFileURL(result.filename).href)).default,resolveSettings(definition(),{}));
-  const customized = "// Keep this author comment\nexport default {heading:'My title'};\n";
-  await writeFile(result.filename,customized);
-  assert.equal((await createThemeConfig(root,'./theme')).created,false);
-  assert.equal(await readFile(result.filename,'utf8'),customized);
+  const text = await settingsTemplate(root,'./theme');
+  assert.match(text, /\/\/ Heading/);
+  assert.deepEqual(await evaluateTemplate(root, text, 'generated'), resolveSettings(definition(),{}));
 });
 
-test('sync copies a directly installed theme template and rejects an escaping template path', async (t) => {
+test('a package settings template keeps its comments and cannot escape its package', async (t) => {
   const root = await projectFixture(t);
-  await writeFile(path.join(root,'site.config.ts'),'export default {};\n');
   await writeFile(path.join(root,'package.json'),JSON.stringify({name:'site',type:'module',dependencies:{'@fixture/theme':'1.2.3'}}));
   const themeRoot = path.join(root,'node_modules/@fixture/theme');
   await writeTheme(themeRoot);
   const pkg = {name:'@fixture/theme',type:'module',exports:{'./theme':'./theme.mjs'},mintfolio:{configTemplate:'./config.mjs'}};
   await writeFile(path.join(themeRoot,'package.json'),JSON.stringify(pkg));
-  const template = `// Author-provided instructions\nexport default ${JSON.stringify(resolveSettings(definition(),{}))};\n`;
-  await writeFile(path.join(themeRoot,'config.mjs'),template);
-  const results = await syncThemeConfigs(root);
-  assert.deepEqual(results.map((entry)=>path.basename(entry.filename)).sort(),['theme-fixture.config.mjs','theme-minimal.config.mjs']);
-  assert.equal(await readFile(path.join(root,'theme-fixture.config.mjs'),'utf8'),template);
-  assert.ok((await syncThemeConfigs(root)).every((entry)=>entry.created===false));
+  const defaults = resolveSettings(definition(),{});
+  await writeFile(path.join(themeRoot,'config.mjs'),`/** File note, not copied. */\nexport default {\n  // Author-provided instructions\n  heading: 'Notes',\n};\n`);
+  const text = await settingsTemplate(root,'@fixture/theme');
+  assert.ok(text.startsWith('{') && text.includes('// Author-provided instructions') && !text.includes('File note'));
+  assert.deepEqual(resolveSettings(definition(), await evaluateTemplate(root, text, 'packaged')), defaults);
   await writeFile(path.join(root,'outside.mjs'),'export default {};\n');
   pkg.mintfolio.configTemplate = './../../../outside.mjs';
   await writeFile(path.join(themeRoot,'package.json'),JSON.stringify(pkg));
-  await assert.rejects(createThemeConfig(root,'@fixture/theme'), /Template escapes/);
+  await assert.rejects(settingsTemplate(root,'@fixture/theme'), /Template escapes/);
 });

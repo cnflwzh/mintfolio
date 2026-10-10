@@ -35,7 +35,7 @@ cd my-blog
 mintfolio dev
 ~~~
 
-打开终端显示的地址。编辑 site.config.ts 填写资料，文章放在 content/blog。
+打开终端显示的地址。站点根目录就是文章目录；站点资料、主题和独立页面都在 `_mintfolio/` 里。之后在站点里直接运行 `mintfolio`，可以通过菜单写文章、预览、构建和调整主题。已有一个放 Markdown 笔记的目录时，在其中运行 `mintfolio init` 即可。
 
 想使用上图的 Verdant：
 
@@ -49,7 +49,7 @@ mintfolio theme install verdant --use
 mintfolio post new "我的第一篇文章" --slug first-post
 ~~~
 
-打开 content/blog/first-post.md 写正文。新文章默认是草稿，准备好后再发布并构建：
+打开站点根目录的 first-post.md 写正文（不带参数运行 `mintfolio post new` 会逐项询问）。新文章默认是草稿，准备好后再发布并构建：
 
 ~~~sh
 mintfolio post publish first-post
@@ -57,9 +57,9 @@ mintfolio build
 mintfolio preview
 ~~~
 
-post publish 修改本地草稿状态；build 生成 dist；部署时上传 dist 中的内容。[写作教程](https://github.com/MintfolioBlog/mintfolio/wiki/Writing) 介绍日期、封面、嵌套目录和密码文章。
+post publish 修改本地草稿状态；build 生成 `_mintfolio/dist`；部署时上传其中的内容。[写作教程](https://github.com/MintfolioBlog/mintfolio/wiki/Writing) 介绍日期、封面、嵌套目录和密码文章。
 
-部署到 `/blog-site/` 等子目录时，在 `astro.config.mjs` 设置 `base`，然后重新构建并上传完整 `dist`。Core 会统一处理页面、资源、搜索与订阅地址；托管服务的 404 和域根 robots 配置见 [部署说明](docs/deployment.md)。
+部署到 `/blog-site/` 等子目录时，添加只含 `export default { base: '/blog-site/' }` 的可选 `_mintfolio/astro.config.mjs`，然后重新构建并上传完整 `_mintfolio/dist`。站点目录的约定见 [命令行文档](docs/cli.md#站点目录)。Core 会统一处理页面、资源、搜索与订阅地址；托管服务的 404 和域根 robots 配置见 [部署说明](docs/deployment.md)。
 
 ## 常用操作
 
@@ -108,3 +108,7 @@ post publish 修改本地草稿状态；build 生成 dist；部署时上传 dist
 ## 许可证
 
 [GPL-3.0-only](LICENSE)。第三方依赖和资源保留各自许可证，见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+
+## 站点统计
+
+Google Analytics 配置位于 site.config.ts 的 analytics.google，由 Core 仅在生产构建中统一注入，不依赖当前主题。迁移步骤与 GA4 自动页面浏览设置见 [统计配置](docs/analytics.md)。

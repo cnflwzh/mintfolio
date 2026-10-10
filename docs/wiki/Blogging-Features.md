@@ -4,7 +4,7 @@ Core 在构建时读取 Markdown、生成页面与订阅文件。部署后只需
 
 ## 一篇完整的文章
 
-把文章保存到 `content/blog/**/*.md`，例如 `content/blog/notes/start.md`：
+把文章保存在站点根目录或它的子目录中，例如 `notes/start.md`（以 `_` 或 `.` 开头的目录、`_mintfolio/` 和 README 等仓库说明文件除外）：
 
 ```md
 ---
@@ -83,20 +83,9 @@ mintfolio dev --drafts
 
 ## 独立 Markdown 页面
 
-在站点的 `src/content.config.ts` 注册 `pages` 集合：
+`pages` 集合由 Core 自动注册，把 Markdown 放进 `_mintfolio/pages/` 即可。
 
-```ts
-import { createBlogCollection, createPageCollection } from '@mintfolio/core/content';
-
-export const collections = {
-  blog: createBlogCollection(),
-  pages: createPageCollection(),
-};
-```
-
-默认目录分别是 `content/blog` 和 `content/pages`；需要其他目录时，可传入相对站点根目录的 `base`。
-
-例如 `content/pages/friends.md`：
+例如 `_mintfolio/pages/friends.md`：
 
 ```md
 ---

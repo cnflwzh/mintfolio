@@ -55,17 +55,25 @@ export default function themeRuntime(selection = {}, engine = {}) {
   return {
     name: 'mintfolio:theme-runtime',
     hooks: {
-      'astro:config:setup': async ({ config, updateConfig, addWatchFile, injectRoute, command, logger }) => {
+      'astro:config:setup': async ({ config, updateConfig, addWatchFile, injectRoute, addMiddleware, command, logger }) => {
         const root = fileURLToPath(config.root);
         const publishedBefore = new Date().toISOString();
         const themeName = process.env.MINTFOLIO_THEME || selection.theme;
         const changedSelection = Boolean(process.env.MINTFOLIO_THEME) && themeName !== selection.theme;
         const active = await loadTheme({ root, theme: themeName, settings: changedSelection ? {} : selection.settings, overrides: changedSelection ? {} : selection.overrides, fresh: command === 'dev' });
-        const minimal = active.definition.manifest.id === 'minimal' ? active : await loadTheme({ root, theme: 'minimal', readUserConfig: false });
+        const minimal = active.definition.manifest.id === 'minimal' ? active : await loadTheme({ root, theme: 'minimal' });
         const siteConfig = path.resolve(root, engine.siteConfig ?? './site.config.ts');
         if (engine.routes) {
           updateConfig({prerenderConflictBehavior:'error'});
           addWatchFile(siteConfig);
+          // Inject once at the Core response boundary, including theme overrides.
+          // Development never installs the middleware, even with NODE_ENV overrides.
+          if (command === 'build') {
+            addMiddleware({
+              entrypoint: fileURLToPath(new URL('../server/analytics-middleware.ts', import.meta.url)),
+              order: 'post',
+            });
+          }
           for (const [pattern, source] of [
             ['/', 'index.astro'], ['/about', 'about.astro'], ['/blog', 'blog/index.astro'],
             ['/blog/[...slug]', 'blog/[...slug].astro'], ['/404', '404.astro'],
@@ -89,7 +97,6 @@ export default function themeRuntime(selection = {}, engine = {}) {
         const themeModules = new Set(active.overrideEntries);
         const manifestPath = path.join(root, 'theme.config.mjs');
         addWatchFile(manifestPath);
-        addWatchFile(active.themeConfigFile);
         for (const filename of active.manifestDependencies) addWatchFile(filename);
         logger.info(`Theme: ${active.definition.manifest.name} ${active.definition.manifest.version}`);
         const optionalMissing = ['page', 'archive', 'notFound'].filter((kind) => !active.pages[kind]);

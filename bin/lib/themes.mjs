@@ -2,11 +2,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import semver from 'semver';
-import { createThemeConfig, normalizeThemeName } from '../theme-config.mjs';
+import { normalizeThemeName, settingsTemplate } from '../theme-config.mjs';
 import { loadTheme } from '../../src/engine/loader.mjs';
-import { mergeThemeSettings } from '../../src/engine/theme-config.mjs';
-import { resolveSettings } from '../../src/engine/schema.mjs';
-import { configSource, setSourceValue, sourceNode, sourceValue } from './config-source.mjs';
+import { setSourceText, setSourceValue } from './config-source.mjs';
 import { checkedPath, exists, saveFile } from './files.mjs';
 import { npm } from './process.mjs';
 
@@ -62,27 +60,20 @@ export async function listThemes(root) {
 export async function installTheme(root, spec, use = false) {
   const pkg = packageSpec(spec);
   await npm(['install', pkg.spec, '--no-audit'], root);
-  const result = await createThemeConfig(root, pkg.name);
-  console.log(`${result.created ? '已生成' : '已保留'} ${result.filename}`);
   if (use) await useTheme(root, pkg.name);
   else console.log(`启用主题：mintfolio theme use ${pkg.name}`);
 }
 
-/** Apply an object as individual source edits so unrelated comments remain intact. */
-function mergeSource(source, value, prefix = []) {
-  for (const [key, child] of Object.entries(value)) {
-    const keys = [...prefix, key];
-    if (child && typeof child === 'object' && !Array.isArray(child) && Object.keys(child).length) source = mergeSource(source, child, keys);
-    else source = setSourceValue(source, keys.join('.'), child);
-  }
-  return source;
+/** @param {object} selection @returns {boolean} Whether theme.config.mjs already holds any settings. */
+function hasSettings(selection) {
+  return Boolean(selection.settings && typeof selection.settings === 'object' && Object.keys(selection.settings).length);
 }
 
 /**
- * Select an installed theme. Legacy inline settings are retained in the previous
- * theme's own file before clearing the inline override; both changes get backups.
+ * Select a theme and replace settings with its commented template. Settings
+ * belong to one theme, so the previous values stay only in the backup.
  * @param {string} root Site root. @param {string} selector Installed theme/package or local directory.
- * @returns {Promise<void>} New selection is validated before persistent changes.
+ * @returns {Promise<void>} The new theme is validated before the file changes.
  */
 export async function useTheme(root, selector) {
   const theme = normalizeThemeName(selector);
@@ -94,26 +85,24 @@ export async function useTheme(root, selector) {
   const filename = path.join(root, 'theme.config.mjs');
   const original = await readFile(filename, 'utf8');
   let source = setSourceValue(original, 'theme', theme, filename);
-  const inline = selection.settings;
-  let migration;
-  if (inline && Object.keys(inline).length) {
-    const current = await activeTheme(root);
-    const doc = configSource(original, filename);
-    const literal = sourceValue(doc, sourceNode(doc, ['settings']));
-    if (JSON.stringify(literal) !== JSON.stringify(inline)) throw new Error('旧的内联 settings 包含动态表达式，请先移到对应主题配置文件再切换。');
-    const result = await createThemeConfig(root, previous);
-    const before = await readFile(result.filename, 'utf8');
-    const after = mergeSource(before, inline);
-    resolveSettings(current.definition, mergeThemeSettings(sourceValue(configSource(after)), {}));
-    migration = { filename: result.filename, before, after };
-    source = setSourceValue(source, 'settings', {}, filename);
-  }
-  await createThemeConfig(root, theme);
-  // Check the selection again before the first mutation to avoid stale writes.
-  if (await readFile(filename, 'utf8') !== original) throw new Error('主题选择已被其他程序修改，请重试。');
-  if (migration) await saveFile(root, migration.filename, migration.before, migration.after);
+  source = setSourceText(source, 'settings', await settingsTemplate(root, theme), filename);
   const backup = await saveFile(root, filename, original, source);
-  console.log(`已启用 ${theme}`);
-  if (migration) console.log(`旧主题设置已保留在 ${migration.filename}`);
-  if (backup) console.log(`备份：${backup}`);
+  console.log(`已启用 ${theme}，主题设置已写入 theme.config.mjs 的 settings。`);
+  if (backup) console.log(`${hasSettings(selection) ? '原主题设置已备份到' : '备份'}：${backup}`);
+}
+
+/**
+ * Write the active theme's commented settings template when settings are empty,
+ * so every option is visible in theme.config.mjs. Existing settings are kept.
+ * @param {string} root Site root.
+ * @returns {Promise<{filename:string,created:boolean}>}
+ */
+export async function initThemeSettings(root) {
+  const selection = await readSelection(root);
+  const filename = path.join(root, 'theme.config.mjs');
+  if (hasSettings(selection)) return { filename, created: false };
+  const original = await readFile(filename, 'utf8');
+  const source = setSourceText(original, 'settings', await settingsTemplate(root, selection.theme || 'minimal'), filename);
+  await saveFile(root, filename, original, source);
+  return { filename, created: true };
 }

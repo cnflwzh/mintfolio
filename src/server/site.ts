@@ -26,6 +26,7 @@ export function getPublicSite(): PublicSite {
     projects: config.projects.map((project) => ({ ...project, tags: [...project.tags], ...(project.image ? {image: resolveAsset(project.image)} : {}), ...(project.link ? {link: resolveAsset(project.link)} : {}) })),
     contact: { ...config.contact, social: [...config.contact.social] },
     icp: config.icp,
+    ...(config.analytics?.google ? { analytics: { google: { ...config.analytics.google } } } : {}),
     blog: { pageSize: config.blog?.pageSize ?? 10, timezone: config.blog?.timezone ?? 'UTC' },
     feed: { limit: config.feed?.limit ?? 50, content: config.feed?.content ?? 'summary' },
     seo: { ...config.seo }, authors: config.authors?.map(author => ({ ...author, ...(author.avatar ? {avatar: typeof author.avatar === 'string' ? resolveAsset(author.avatar) : author.avatar} : {}) })),
