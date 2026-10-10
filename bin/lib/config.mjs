@@ -9,6 +9,17 @@ import { configSource, setSourceValue, sourceNode, sourceValue } from './config-
 import { checkedPath, getIn, keyPath, saveFile, setIn } from './files.mjs';
 
 const string = z.string();
+const nonempty = string.refine(value => value.trim().length > 0, '字段不能为空');
+const httpUrl = string.url().refine(value => /^https?:\/\//i.test(value), '需要 HTTP(S) URL');
+const timezone = string.refine(value => {
+  try { new Intl.DateTimeFormat('en', { timeZone: value }); return true; }
+  catch { return false; }
+}, '需要有效的 IANA 时区，例如 Asia/Hong_Kong');
+const navigationUrl = string.refine(value => {
+  if (/^\/(?!\/)/.test(value)) return !/[\\\u0000-\u0020]/.test(value);
+  try { return ['http:', 'https:'].includes(new URL(value).protocol); }
+  catch { return false; }
+}, '导航地址必须是站内根路径或 HTTP(S) URL');
 const image = z.union([string, z.object({ src: string, width: z.number(), height: z.number(), format: string.optional() })]);
 /** CLI input validation mirrors the public SiteConfigInput, without evaluating site imports. */
 const siteSchema = z.object({
@@ -23,6 +34,11 @@ const siteSchema = z.object({
   projects: z.array(z.object({ title: string, description: string, link: string.optional(), repo: string.optional(), tags: z.array(string), image: string.optional() }).strict()),
   contact: z.object({ email: string.optional(), social: z.array(string).optional() }).strict(),
   icp: string,
+  blog: z.object({ pageSize: z.number().int().min(1).max(100).optional(), timezone: timezone.optional() }).strict().optional(),
+  seo: z.object({ defaultSocialImage: string.optional(), twitterSite: string.optional() }).strict().optional(),
+  feed: z.object({ limit: z.number().int().min(1).max(1000).optional(), content: z.enum(['summary', 'full']).optional() }).strict().optional(),
+  authors: z.array(z.object({ id: nonempty, name: nonempty, url: httpUrl.optional(), avatar: string.optional(), bio: string.optional() }).strict()).refine(authors => new Set(authors.map(author => author.id)).size === authors.length, '作者 ID 不能重复').optional(),
+  navigation: z.array(z.object({ id: nonempty, label: nonempty, url: navigationUrl }).strict()).optional(),
 }).strict();
 
 function siteField(keys) {
@@ -122,6 +138,12 @@ export async function setConfig(root, scope, key, raw, options = {}) {
   await checkedPath(root, filename);
   const original = await readFile(filename, 'utf8');
   const source = setSourceValue(original, sourceKey, value, filename);
+  if (scope === 'site' && ['authors', 'navigation'].includes(keys[0])) {
+    // Validate the resulting registry as a unit so editing authors.1.id cannot
+    // introduce a duplicate ID even when the edited scalar is individually valid.
+    const document = configSource(source, filename);
+    siteSchema.shape[keys[0]].parse(sourceValue(document, sourceNode(document, [keys[0]])));
+  }
   return { filename, value, backup: await saveFile(root, filename, original, source) };
 }
 
@@ -140,5 +162,10 @@ export async function configSchema(root, scope, selector) {
     projects: 'JSON 数组：{ title, description, tags, link?, repo?, image? }',
     contact: { email: '字符串', social: '平台名字符串数组' },
     icp: '字符串',
+    blog: { pageSize: '1–100 的整数，默认 10', timezone: 'IANA 时区，默认 UTC，例如 Asia/Hong_Kong' },
+    seo: { defaultSocialImage: '默认分享图片地址', twitterSite: 'Twitter/X 账号，例如 @example' },
+    feed: { limit: '1–1000 的整数，默认 50', content: 'summary 或 full' },
+    authors: 'JSON 数组：{ id, name, url?, avatar?, bio? }，id 不重复，url 使用 HTTP(S)',
+    navigation: 'JSON 数组：{ id, label, url }，url 使用站内根路径或 HTTP(S)',
   };
 }

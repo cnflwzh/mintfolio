@@ -1,10 +1,12 @@
 ---
+import { prepareContentHtml } from '../../server/contentHtml';
+import '../../components/content.css';
 import type { CollectionEntry } from 'astro:content';
 import type { ArticleHeading, ArticleBody, PostPageData } from '@mintfolio/theme-api/astro';
 import { encryptArticle } from '@mintfolio/theme-api/crypto';
 import { activeTheme, getRenderer } from 'virtual:mintfolio/theme';
 import { createThemeContext } from '../context';
-import { toPostSummary, isProtectedPost } from '../../server/posts';
+import { summarizePost, isProtectedPost } from '../../server/posts';
 import { pageSeo } from '../../server/seo';
 
 /** Private adapter props; only the Core article route can supply collection data. */
@@ -14,10 +16,10 @@ interface Props {
 }
 const { entry, headings } = Astro.props;
 const theme = await createThemeContext(activeTheme);
-const post = toPostSummary(entry);
+const post = summarizePost(entry);
 // The slot is compiled by Astro before any theme sees the result. Protected
 // content and headings are encrypted together and never become renderer props.
-const html = await Astro.slots.render('default');
+const html = prepareContentHtml(await Astro.slots.render('default'));
 const body: ArticleBody = isProtectedPost(entry)
   ? { kind: 'protected', postId: entry.id, payload: await encryptArticle(JSON.stringify({ version: 1, html, headings }), entry.data.password!, entry.id) }
   : { kind: 'public', html, headings };
@@ -29,6 +31,8 @@ const page: PostPageData = {
   seo: pageSeo(theme.site, post.title, post.description, post.url, post),
   previous: posts[index - 1] ?? null,
   next: posts[index + 1] ?? null,
+  related: await theme.content.related(post.id),
+  seriesPosts: post.series ? posts.filter(item=>item.series?.id===post.series?.id).toSorted((a,b)=>(a.series?.order??Infinity)-(b.series?.order??Infinity)||Date.parse(a.publishedAt)-Date.parse(b.publishedAt)) : [],
 };
 const Renderer = getRenderer('post');
 ---

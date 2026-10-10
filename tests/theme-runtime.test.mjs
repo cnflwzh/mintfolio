@@ -54,10 +54,10 @@ test('manifest validation enforces required renderers, known capabilities, and r
   assert.throws(() => validateTheme(definition({ pages: { home: './pages/home.astro' } }), 'fixture/theme.mjs'), /pages\.post/);
   assert.throws(() => validateTheme(definition({ capabilities: { serach: true } }), 'fixture/theme.mjs'), /capabilities/);
   assert.throws(() => validateTheme({ ...definition(), extends: 'parent' }, 'fixture/theme.mjs'), /extends/);
-  for (const engine of ['^2.0.0', '>=1.1.0 <2.0.0', 'not-a-version']) {
+  for (const engine of ['^2.0.0', '>=1.0.0 <1.1.0', 'not-a-version']) {
     assert.throws(() => validateTheme(definition({ manifest: { ...definition().manifest, engine } }), 'fixture/theme.mjs'), /engine/);
   }
-  assert.equal(validateTheme(definition({ manifest: { ...definition().manifest, engine: '>=0.9.0 <1.1.0' } }), 'fixture/theme.mjs').manifest.id, 'fixture');
+  assert.equal(validateTheme(definition({ manifest: { ...definition().manifest, engine: '>=1.1.0 <2.0.0' } }), 'fixture/theme.mjs').manifest.id, 'fixture');
 });
 
 test('settings apply typed defaults and reject misspellings, invalid values, and invalid schemas', () => {

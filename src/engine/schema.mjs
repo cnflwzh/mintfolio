@@ -1,9 +1,10 @@
 // @ts-check
 import { z } from 'astro/zod';
 import semver from 'semver';
+import { THEME_API_VERSION } from '@mintfolio/theme-api';
 
 /** Theme contract version; independent of the application and Astro versions. */
-export const THEME_ENGINE_VERSION = '1.0.0';
+export const THEME_ENGINE_VERSION = THEME_API_VERSION;
 export const PAGE_KINDS = ['home', 'post', 'page', 'archive', 'notFound'];
 
 const label = { label: z.string().min(1), description: z.string().optional() };

@@ -4,6 +4,7 @@ import { mkdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { initialize } from './lib/init.mjs';
+import { checkContent } from './lib/content-check.mjs';
 import { cliVersion, createSite, doctor, requireThemeConfigRuntime } from './lib/site.mjs';
 import { createPost, listPosts, setDraft } from './lib/posts.mjs';
 import { activeTheme, installTheme, listThemes, packageSpec, readSelection, useTheme } from './lib/themes.mjs';
@@ -26,7 +27,7 @@ const help = {
   theme init|sync|check            生成和校验主题配置
   config get|set|path|edit|schema   查看、修改或打开配置
   doctor                          检查站点环境与已安装版本
-  check                           校验主题并同步 Astro 内容
+  check [--json]                  校验环境、主题、内容链接和图片
   --version                       显示 CLI 版本
 
 使用 mintfolio <命令> --help 查看用法。
@@ -42,12 +43,14 @@ const help = {
 
   new <标题> [--slug <ID>] [--description <摘要>] [--category <分类>]
              [--tags <逗号分隔标签>] [--date YYYY-MM-DD] [--publish]
-  list [--draft | --published] [--json]
-  publish <ID>     将 draft 设为 false，下一次构建可见
+  list [--draft | --scheduled | --publishable] [--json]
+  publish <ID>     将 draft 设为 false，到期后可参与构建
   draft <ID>       将 draft 设为 true
 
 新文章默认是草稿，存放在 content/blog；ID 支持 notes/hello 等目录。
-标题含空格时请加引号。不会覆盖同名文件。publish 不执行部署。
+标题含空格时请加引号。不会覆盖同名文件。publish 不执行构建或部署。
+--published 是 --publishable 的兼容别名，表示非草稿且已到发布日期。
+列表显示草稿、定时和可参与构建三种状态；同次列表使用同一检查时间。
 示例：mintfolio post new "我的第一篇文章" --slug first-post --tags 随笔,生活`,
   theme: `用法：mintfolio theme <操作>
 
@@ -79,7 +82,11 @@ site 值按源文件读取；动态表达式显示为 $expression，不执行导
       mintfolio config set theme initialPalette 3
       mintfolio config set theme sidebar.quote.enabled true`,
   doctor: '用法：mintfolio doctor [--json]\n检查 Node、当前站点 Core/Astro、主题与配置，不修改文件。',
-  check: '用法：mintfolio check\n检查站点和主题，然后运行 Astro sync 校验内容并生成类型；不代替生产构建。',
+  dev: '用法：mintfolio dev [--drafts] [Astro 参数]\n--drafts 仅在本地开发时显示草稿和未来文章，不写入生产构建。其他参数传给 Astro。',
+  build: '用法：mintfolio build [Astro 参数]\n生成静态站点，始终排除草稿和未到发布日期的文章；不接受 --drafts。',
+  preview: '用法：mintfolio preview [Astro 参数]\n预览已经生成的生产文件；不接受 --drafts。',
+  sync: '用法：mintfolio sync [Astro 参数]\n同步内容并生成 Astro 类型；不接受 --drafts。',
+  check: '用法：mintfolio check [--json]\n先检查环境与主题并运行 Astro sync，再检查 Markdown 的链接、图片、锚点和地址冲突。\n--json 将完整结果输出为一个 JSON 对象，Astro 日志写入 stderr。错误返回非零状态；警告不阻止构建。',
 };
 
 /** @param {string[]} args @param {object} [options] @returns {{values:object,positionals:string[]}} Strict argument parsing shared by commands. */
@@ -139,16 +146,23 @@ async function main(argv) {
     return;
   }
   if (['dev', 'build', 'preview', 'sync'].includes(command)) {
+    if (args.includes('--help') || args.includes('-h')) return printHelp(command);
+    const draftFlags = args.filter(arg => /^--drafts(?:=|$)/.test(arg));
+    if (draftFlags.length && command !== 'dev') throw new Error('--drafts 仅适用于 mintfolio dev。');
+    if (draftFlags.some(arg => arg !== '--drafts')) throw new Error('草稿预览请使用 mintfolio dev --drafts，不需要附加值。');
+    const previewDrafts = command === 'dev' && draftFlags.length > 0;
+    args = args.filter(arg => arg !== '--drafts');
     const root = await findSite(cwd);
-    if (!args.includes('--help') && !args.includes('-h') && command !== 'preview') reportThemeConfigs(await syncThemeConfigs(root));
-    await run(process.execPath, [astroEntry(root), command, ...args], root);
+    if (command !== 'preview') reportThemeConfigs(await syncThemeConfigs(root));
+    // Preview intent is explicit per command. Never inherit it into a build.
+    await run(process.execPath, [astroEntry(root), command, ...args], root, { env: { MINTFOLIO_PREVIEW_DRAFTS: previewDrafts ? '1' : undefined } });
     return;
   }
   if (command === 'post') {
     const [action, ...rest] = args;
     if (!action || action === '--help' || action === '-h') return printHelp(command);
     const definitions = action === 'new' ? { slug: { type: 'string' }, description: { type: 'string' }, category: { type: 'string' }, tags: { type: 'string' }, date: { type: 'string' }, publish: { type: 'boolean' } }
-      : action === 'list' ? { draft: { type: 'boolean' }, published: { type: 'boolean' }, json: { type: 'boolean' } } : {};
+      : action === 'list' ? { draft: { type: 'boolean' }, scheduled: { type: 'boolean' }, publishable: { type: 'boolean' }, published: { type: 'boolean' }, json: { type: 'boolean' } } : {};
     const parsed = options(rest, definitions);
     if (parsed.values.help) return printHelp(command);
     if (!['new', 'list', 'publish', 'draft'].includes(action)) throw new Error(`未知文章操作：${action}`);
@@ -156,14 +170,21 @@ async function main(argv) {
     const root = await findSite(cwd);
     if (action === 'new') console.log(`已创建${parsed.values.publish ? '文章' : '草稿'}：${await createPost(root, parsed.positionals[0], parsed.values)}`);
     else if (action === 'list') {
-      if (parsed.values.draft && parsed.values.published) throw new Error('--draft 和 --published 不能同时使用。');
-      const posts = (await listPosts(root)).filter(post => parsed.values.draft ? post.draft : parsed.values.published ? !post.draft : true);
+      const states = [parsed.values.draft && 'draft', parsed.values.scheduled && 'scheduled', (parsed.values.publishable || parsed.values.published) && 'publishable'].filter(Boolean);
+      if (states.length > 1) throw new Error('--draft、--scheduled 和 --publishable（或 --published）不能同时使用。');
+      const posts = (await listPosts(root)).filter(post => !states.length || post.status === states[0]);
       if (parsed.values.json) console.log(JSON.stringify(posts, null, 2));
       else if (!posts.length) console.log('没有匹配的文章。');
-      else for (const post of posts) console.log(`${post.draft ? '草稿' : '已发布'}  ${post.date}  ${post.slug}  ${post.title}`);
+      else {
+        const labels = { draft: '草稿', scheduled: '定时', publishable: '可参与构建' };
+        for (const post of posts) console.log(`${labels[post.status]}  ${post.publishedAt}  ${post.slug}  ${post.title}`);
+      }
     } else {
       const result = await setDraft(root, parsed.positionals[0], action === 'draft');
-      console.log(`${action === 'draft' ? '已设为草稿' : '已标记发布，下次构建生效'}：${result.filename}`);
+      const message = result.status === 'draft' ? '已设为草稿'
+        : result.status === 'scheduled' ? `已取消草稿，发布日期尚未到达（${result.publishedAt}）；到期后需重新构建`
+        : '已取消草稿，可参与下一次构建';
+      console.log(`${message}：${result.filename}`);
       if (result.backup) console.log(`备份：${result.backup}`);
     }
     return;
@@ -225,13 +246,50 @@ async function main(argv) {
     return;
   }
   if (command === 'doctor' || command === 'check') {
-    const parsed = options(args, command === 'doctor' ? { json: { type: 'boolean' } } : {});
+    const parsed = options(args, { json: { type: 'boolean' } });
     if (parsed.values.help) return printHelp(command);
     count(parsed.positionals, 0, 0, command);
     const root = await findSite(cwd);
-    const result = await doctor(root);
-    console.log(parsed.values.json ? JSON.stringify(result, null, 2) : `环境检查通过\n站点：${result.root}\nNode ${result.node} · Core ${result.core} · Astro ${result.astro}\n主题：${result.theme} ${result.themeVersion}\n配置：${result.config}`);
-    if (command === 'check') await run(process.execPath, [astroEntry(root), 'sync'], root);
+    const environmentText = result => `环境检查通过\n站点：${result.root}\nNode ${result.node} · Core ${result.core} · Astro ${result.astro}\n主题：${result.theme} ${result.themeVersion}\n配置：${result.config}`;
+    if (command === 'doctor') {
+      const result = await doctor(root);
+      console.log(parsed.values.json ? JSON.stringify(result, null, 2) : environmentText(result));
+      return;
+    }
+    const result = { status: 'ok', environment: null, sync: { status: 'skipped' }, content: null };
+    try {
+      result.environment = await doctor(root);
+      if (!parsed.values.json) console.log(environmentText(result.environment));
+    } catch (error) {
+      result.status = 'error';
+      result.environment = { status: 'error', message: error.message };
+    }
+    if (result.environment.status === 'ok') {
+      try {
+        await run(process.execPath, [astroEntry(root), 'sync'], root, { stdio: parsed.values.json ? 'stderr' : 'inherit', env: { MINTFOLIO_PREVIEW_DRAFTS: undefined } });
+        result.sync = { status: 'ok' };
+      } catch (error) {
+        result.status = 'error';
+        result.sync = { status: 'error', message: error.message };
+      }
+    }
+    // Source diagnostics still help when Astro rejects a collection schema.
+    try {
+      result.content = await checkContent(root);
+      if (result.content.errors.length) result.status = 'error';
+    } catch {
+      result.status = 'error';
+      result.content = { errors: [{ code: 'CONTENT_CHECK_FAILED', file: 'content', line: 1, column: 1, message: '无法读取内容目录，请检查路径及访问权限。' }], warnings: [], counts: null };
+    }
+    if (parsed.values.json) console.log(JSON.stringify(result, null, 2));
+    else {
+      if (result.environment.status === 'error') console.error(`环境检查失败：${result.environment.message}`);
+      if (result.sync.status === 'error') console.error(`Astro sync 失败：${result.sync.message}`);
+      for (const item of result.content.errors) console.error(`${item.file}:${item.line}:${item.column} ${item.code} ${item.message}`);
+      for (const item of result.content.warnings) console.warn(`${item.file}:${item.line}:${item.column} ${item.code} ${item.message}`);
+      console.log(`内容检查：${result.content.counts?.files ?? 0} 个文件，${result.content.errors.length} 个错误，${result.content.warnings.length} 个警告。`);
+    }
+    if (result.status === 'error') process.exitCode = 1;
     return;
   }
   throw new Error(`未知命令：${command}\n运行 mintfolio --help 查看可用命令。`);

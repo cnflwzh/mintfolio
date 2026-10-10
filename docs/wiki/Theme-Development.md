@@ -4,7 +4,7 @@
 
 ## 1. 取得模板
 
-在 [Theme Starter 仓库](https://github.com/cnflwzh/mintfolio-theme-starter) 选择 **Use this template**，然后克隆自己的仓库并安装：
+在 [Theme Starter 仓库](https://github.com/MintfolioBlog/mintfolio-theme-starter) 选择 **Use this template**，然后克隆自己的仓库并安装：
 
 ```sh
 git clone https://github.com/your-name/your-theme.git
@@ -12,7 +12,7 @@ cd your-theme
 npm ci
 ```
 
-模板包含 `theme.mjs`、首页与文章页、布局、样式、类型检查和 CI。归档、关于与 404 页面未实现时由 Core 的 Minimal 补齐。
+模板包含 `theme.mjs`、首页、文章、归档与普通页面，以及布局、样式、类型检查和 CI。未实现的 404 页面由 Core 的 Minimal 补齐。
 
 修改 `package.json` 的包名、作者、仓库地址与版本，以及 `theme.mjs` 的 ID、显示名、作者、描述。主题 ID 使用稳定的小写连字符名称，它决定用户配置文件名。
 
@@ -28,7 +28,7 @@ export default defineTheme({
     version: '1.0.0',
     author: 'Your name',
     description: '简洁的阅读主题',
-    engine: '^1.0.0',
+    engine: '^1.1.0',
   },
   capabilities: { encryptedPosts: true },
   pages: {

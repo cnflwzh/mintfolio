@@ -43,7 +43,7 @@ test('public projection includes only safe metadata and preserves canonical enco
   assert.equal(result.url, '/blog/%E7%AC%94%E8%AE%B0/a%20b%23c');
   assert.equal(result.protected, false);
   assert.equal(result.tags[0].url, urls.tag('C++'));
-  assert.equal(new URL(result.category.url, 'https://example.com').searchParams.get('category'), 'Web / 前端');
+  assert.equal(result.category.url, '/categories/'+encodeURIComponent('Web ~2F 前端'));
   assert.equal('password' in result, false);
   assert.equal('body' in result, false);
   assert.equal('data' in result, false);
@@ -95,4 +95,39 @@ test('monthly archives use UTC boundaries and retain the source post order withi
   assert.deepEqual(groups[1].posts.map((post) => post.id), ['boundary', 'august']);
   assert.equal(groups[0].posts[0], posts[0]);
   assert.deepEqual(collectArchives([]), []);
+});
+
+
+test('scheduled publication uses an explicit cutoff and preview never mutates records', () => {
+  const now=new Date('2026-09-12T00:00:00Z');
+  const rows=[record('future',{pubDate:new Date('2026-09-12T00:00:01Z')}),record('draft',{draft:true}),record('live',{pubDate:now}),record('pinned',{pinned:true,pubDate:new Date('2020-01-01')})];
+  assert.deepEqual(selectPublishedPosts(rows,{now}).map(p=>p.id),['pinned','live']);
+  assert.equal(selectPublishedPosts(rows,{now,preview:true}).length,4);
+  assert.equal(rows[1].data.draft,true);
+});
+
+test('stable slugs and public author metadata are explicit; private SEO cannot reveal summaries', () => {
+  const authors=[{id:'ada',name:'Ada',url:'https://example.com/ada'}];
+  const post=toPostSummary(record('source-file',{slug:'guides/稳定地址',updatedAt:new Date('2026-09-09'),authors:['ada'],series:'深入学习',seriesOrder:2}),{authors});
+  assert.equal(post.url,'/blog/guides/'+encodeURIComponent('稳定地址'));
+  assert.equal(post.updatedAt,'2026-09-09T00:00:00.000Z');
+  assert.deepEqual(post.authors,authors);
+  assert.equal(post.series.order,2);
+  assert.throws(()=>toPostSummary(record('bad',{authors:['missing']}),{authors}),/Unknown author/);
+  const protectedPost=toPostSummary(record('secret',{password:'test-secret-password',seo:{description:'private description',image:'/private-image.png',noindex:true}}));
+  assert.equal(JSON.stringify(protectedPost).includes('private'),false);
+});
+
+
+test('taxonomy routes are portable and preserve encoded labels and combined filters', () => {
+  assert.equal(urls.tag('a/b'),'/tags/a~2Fb');
+  assert.notEqual(urls.tag('a~2Fb'),urls.tag('a/b'));
+  assert.equal(urls.tag('CON'),'/tags/~43ON');
+  assert.equal(urls.tag('C: 系统'),'/tags/C~3A%20'+encodeURIComponent('系统'));
+  assert.equal(urls.tag('尾点.'),'/tags/'+encodeURIComponent('尾点')+'~2E');
+  assert.equal(urls.tag('Cafe\u0301'),urls.tag('Café'));
+  const paged=new URL(urls.archivePage(2,{q:'Astro 中文',tag:'Web',category:'技术'}),'https://example.com');
+  assert.equal(paged.pathname,'/tags/Web/page/2');
+  assert.equal(paged.searchParams.get('q'),'Astro 中文');
+  assert.equal(paged.searchParams.get('category'),'技术');
 });

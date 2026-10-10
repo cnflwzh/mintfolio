@@ -1,0 +1,8 @@
+---
+import { routePath } from '../server/routing';
+import { getExtraRoutes,type ExtraRoute } from '../server/extraRoutes';
+import ExtraPage from '../engine/runtime/extra-page.astro';
+export async function getStaticPaths() { return (await getExtraRoutes()).filter(route=>!routePath(route.url).startsWith('/blog/')).map(route=>({params:{path:decodeURIComponent(routePath(route.url).slice(1))},props:{route}})); }
+interface Props {route:ExtraRoute}
+---
+<ExtraPage route={Astro.props.route}/>

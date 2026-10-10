@@ -1,17 +1,20 @@
 ---
-import { render, type CollectionEntry } from 'astro:content';
-import { getPublishedPosts } from '../../server/posts';
+import { routePath } from '../../server/routing';
+import { render,type CollectionEntry } from 'astro:content';
+import { getVisiblePosts } from '../../server/posts';
+import { getExtraRoutes,type ExtraRoute } from '../../server/extraRoutes';
 import PostPage from '../../engine/runtime/post-page.astro';
-
-/** Core generates article routes; a theme supplies only the page renderer. */
+import ExtraPage from '../../engine/runtime/extra-page.astro';
 export async function getStaticPaths() {
-  return (await getPublishedPosts()).map((post) => ({
-    params: { slug: post.id },
-    props: { post },
-  }));
+  const extra=await getExtraRoutes();
+  return [
+    ...(await getVisiblePosts()).map(post=>({params:{slug:post.data.slug||post.id},props:{post}})),
+    ...extra.filter(route=>routePath(route.url).startsWith('/blog/')).map(route=>({params:{slug:decodeURIComponent(routePath(route.url).slice('/blog/'.length))},props:{route}})),
+  ];
 }
-interface Props { post: CollectionEntry<'blog'> }
-const { post } = Astro.props;
-const { Content, headings } = await render(post);
+interface Props {post?:CollectionEntry<'blog'>;route?:ExtraRoute}
+const {post,route}=Astro.props;
+const rendered=post?await render(post):null;
+const Content=rendered?.Content;
 ---
-<PostPage entry={post} headings={headings}><Content /></PostPage>
+{post && Content ? <PostPage entry={post} headings={rendered!.headings}><Content/></PostPage> : route && <ExtraPage route={route}/>}

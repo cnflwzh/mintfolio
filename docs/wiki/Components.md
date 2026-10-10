@@ -12,20 +12,33 @@
 
 ## PostArchive
 
-提供搜索、标签和分类筛选、结果数量以及可选“加载更多”。
+提供当前页静态列表、标签/分类链接、全站全文搜索和静态分页。
 
 | 参数 | 类型 | 含义 |
 | --- | --- | --- |
-| `posts` | `PostSummary[]` | Core 传入的完整公开列表 |
+| `posts` | `PostSummary[]` | Core 传入的当前页公开列表 |
 | `tags` | `TaxonomyCount[]` | 可选标签及数量 |
 | `categories` | `TaxonomyCount[]` | 可选分类及数量 |
 | `filters` | `Partial<PostFilters>` | 可选初始筛选 |
 | `language` | `string` | 日期显示语言，默认 zh-CN |
-| `pageSize` | 正整数 | 每批条数；省略则显示全部匹配项 |
+| `pagination` | `Pagination` | 可选静态分页信息 |
+| `pageSize` | 正整数 | 旧参数保留兼容；实际条数由 `site.blog.pageSize` 控制 |
 
 前三项必传。`theme.taxonomy.tags()` 和 `categories()` 获取对应数据。完整用例见 [Theme API](Theme-API)。
 
-浏览器中的筛选会同步 URL，并处理后退导航。组件以安全 DTO 建立索引，不包含密码文章正文。
+浏览器中的筛选会同步 URL，并处理后退导航。SearchPanel 按需加载 Core 的公开全文索引，不包含密码文章正文。
+
+## SearchPanel / Pagination
+
+SearchPanel 可单独放入主题：`<SearchPanel />` 默认读取 `/search-index.json`，支持中文、组合查询、安全高亮、失败重试与旧查询 URL。可传 `endpoint` 和 `placeholder`；endpoint 必须同源。正常分类页上的新搜索默认搜索全站。
+
+Pagination 接收 `pagination={page.pagination}`，输出真实上下页及页码链接；无 JavaScript 也能浏览。
+
+## PostMeta / ArticleLinks
+
+PostMeta 接收 `post`，可选 `language`、`timezone`，呈现日期、更新时间、公开阅读统计、作者和预览标记。
+
+ArticleLinks 接收 `page={page}`（PostPageData），按 Core 提供的数据呈现系列目录、相关文章和相邻文章。
 
 ## ProtectedArticle
 

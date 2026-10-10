@@ -2,6 +2,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { isMap, isScalar, parseDocument } from 'yaml';
 import { checkedPath, exists, saveFile } from './files.mjs';
+import { publicationState } from '../../src/shared/publication.mjs';
 
 /** @param {Date} [date] Local calendar date for article frontmatter. @returns {string} YYYY-MM-DD. */
 export function today(date = new Date()) {
@@ -68,13 +69,19 @@ function frontmatter(source, filename) {
 /**
  * Toggle draft status while retaining Markdown and all unrelated YAML bytes.
  * @param {string} root Site root. @param {string} slug Article ID.
- * @param {boolean} draft true saves as draft, false makes it eligible for the next build.
- * @returns {Promise<{filename:string,backup:string|null}>} Updated article and exact backup.
+ * @param {boolean} draft true saves as draft; false permits building once pubDate is reached.
+ * @param {{now?:Date}} [options] Optional fixed cutoff; otherwise captured once on entry.
+ * @returns {Promise<{filename:string,backup:string|null,status:import('../../src/shared/publication.mjs').PublicationState,publishedAt:string}>}
+ *   Updated article, exact backup, eligibility at the cutoff and full UTC publication time.
+ * @throws {Error} Invalid metadata or an unsafe/concurrently changed file; no write occurs.
  */
-export async function setDraft(root, slug, draft) {
+export async function setDraft(root, slug, draft, options = {}) {
+  const now = options.now ?? new Date();
   const filename = await checkedPath(root, path.join(root, 'content/blog', postPath(slug)));
   const original = await readFile(filename, 'utf8');
   const { document, start, end } = frontmatter(original, filename);
+  const pubDate = document.get('pubDate');
+  const status = publicationState({ draft, pubDate }, now);
   const node = document.get('draft', true);
   let source;
   if (node !== undefined) {
@@ -84,15 +91,19 @@ export async function setDraft(root, slug, draft) {
     const eol = original.includes('\r\n') ? '\r\n' : '\n';
     source = original.slice(0, end) + `draft: ${draft}${eol}` + original.slice(end);
   }
-  return { filename, backup: await saveFile(root, filename, original, source) };
+  return { filename, backup: await saveFile(root, filename, original, source), status, publishedAt: new Date(pubDate).toISOString() };
 }
 
 /**
  * List public metadata only; passwords and article bodies are never printed.
  * @param {string} root Site root.
- * @returns {Promise<Array<{slug:string,title:string,date:string,draft:boolean}>>} Date-sorted article metadata.
+ * @param {{now?:Date}} [options] Optional fixed cutoff; otherwise captured once for the whole list.
+ * @returns {Promise<Array<{slug:string,title:string,date:string,draft:boolean,status:import('../../src/shared/publication.mjs').PublicationState,publishedAt:string}>>}
+ *   Date-sorted safe metadata. date retains the original calendar date; publishedAt is full UTC.
+ * @throws {Error} Invalid frontmatter/publication metadata or an unsafe content directory.
  */
-export async function listPosts(root) {
+export async function listPosts(root, options = {}) {
+  const now = options.now ?? new Date();
   const base = path.join(root, 'content/blog');
   if (!await exists(base)) return [];
   await checkedPath(root, base);
@@ -105,10 +116,14 @@ export async function listPosts(root) {
         const { document } = frontmatter(await readFile(filename, 'utf8'), filename);
         const title = document.get('title');
         if (typeof title !== 'string') throw new Error(`${filename} 的 title 必须是字符串。`);
-        posts.push({ slug: path.relative(base, filename).replace(/\\/g, '/').replace(/\.md$/, ''), title, date: String(document.get('pubDate') || '').slice(0, 10), draft: document.get('draft') === true });
+        const pubDate = document.get('pubDate');
+        const draft = document.get('draft');
+        const status = publicationState({ draft, pubDate }, now);
+        const publishedAt = new Date(pubDate).toISOString();
+        posts.push({ slug: path.relative(base, filename).replace(/\\/g, '/').replace(/\.md$/, ''), title, date: String(pubDate).slice(0, 10), draft: draft ?? false, status, publishedAt });
       }
     }
   }
   await visit(base);
-  return posts.sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug));
+  return posts.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.slug.localeCompare(b.slug));
 }

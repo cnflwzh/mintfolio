@@ -1,0 +1,26 @@
+---
+import type { PostSummary } from '@mintfolio/theme-api';
+interface Props {
+  /** Safe article metadata; never pass the original collection entry. */
+  post:PostSummary;
+  language?:string;
+  timezone?:string;
+}
+const {post,language='zh-CN',timezone='UTC'}=Astro.props;
+const date=(value:string)=>new Intl.DateTimeFormat(language,{dateStyle:'medium',timeZone:timezone}).format(new Date(value));
+---
+<div class="mintfolio-post-meta">
+  {post.preview&&<strong class="mintfolio-post-meta__preview">本地预览 · 尚未发布</strong>}
+  {post.pinned&&<span>置顶</span>}
+  <time datetime={post.publishedAt}>{date(post.publishedAt)}</time>
+  {post.updatedAt&&post.updatedAt!==post.publishedAt&&<span>更新于 <time datetime={post.updatedAt}>{date(post.updatedAt)}</time></span>}
+  {post.readingMinutes!==undefined&&<span>约 {post.readingMinutes} 分钟</span>}
+  {post.wordCount!==undefined&&<span>{new Intl.NumberFormat(language).format(post.wordCount)} 字</span>}
+  {post.protected&&<span>受保护</span>}
+  {post.authors?.map(author=>author.url?<a href={author.url} rel="author">{author.name}</a>:<span>{author.name}</span>)}
+</div>
+<style>
+  .mintfolio-post-meta{display:flex;flex-wrap:wrap;gap:.4rem 1rem;align-items:baseline;font-size:.85rem;line-height:1.7;color:var(--mintfolio-meta-color,inherit)}
+  .mintfolio-post-meta a{color:inherit}
+  .mintfolio-post-meta__preview{padding:.2rem .5rem;border:1px solid currentColor}
+</style>
